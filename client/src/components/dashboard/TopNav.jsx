@@ -1,0 +1,131 @@
+import React, { useState } from 'react';
+import { 
+  Menu, 
+  Search, 
+  Bell, 
+  User as UserIcon, 
+  Check, 
+  Sparkles,
+  Command
+} from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
+
+export default function TopNav({ onOpenMobileSidebar }) {
+  const { user } = useAuth();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-30 h-16 bg-[#0B0D0C]/85 backdrop-blur-md border-b border-[rgba(185,176,160,0.1)] px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+      {/* Left: Mobile hamburger & Search */}
+      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 max-w-xl">
+        <button
+          onClick={onOpenMobileSidebar}
+          className="lg:hidden p-2 rounded-xl text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] border border-[rgba(185,176,160,0.1)] transition-colors"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
+        {/* Search Input for workflows, executions, and templates */}
+        <div className="relative w-full max-w-xs sm:max-w-md">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#B9B0A0]/70">
+            <Search className="w-4 h-4" />
+          </div>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search workflows, executions, templates..."
+            className="w-full pl-9 pr-14 py-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] text-[#F5F0E6] placeholder-[#B9B0A0]/60 text-xs sm:text-sm focus:outline-none focus:border-[#E5B45B] focus:ring-2 focus:ring-[#E5B45B]/15 transition-all"
+          />
+          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <span className="hidden sm:inline-flex items-center space-x-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0]/70 border border-[rgba(185,176,160,0.12)]">
+              <Command className="w-2.5 h-2.5" />
+              <span>K</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Telemetry pill, Notification icon, and User Profile with Plan */}
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        {/* Backend health status pill */}
+        <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#151715] border border-[rgba(185,176,160,0.12)] text-xs text-[#B9B0A0]">
+          <span className="flex h-2 w-2 relative">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
+          </span>
+          <span className="text-[#F5F0E6] font-medium text-xs">Engine Online</span>
+        </div>
+
+        {/* Notifications Icon (with popover preview) */}
+        <div className="relative">
+          <button
+            onClick={() => setShowNotifications(!showNotifications)}
+            className="p-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] text-[#B9B0A0] hover:text-[#F5F0E6] hover:border-[#E5B45B]/40 transition-all relative"
+            title="System notifications"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E5B45B]" />
+          </button>
+
+          {showNotifications && (
+            <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl p-4 space-y-3 z-50">
+              <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-2.5">
+                <span className="text-xs font-semibold text-[#F5F0E6]">Notifications</span>
+                <span className="text-[10px] text-[#E5B45B] font-mono">System Active</span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-[#059669]/15 text-[#059669] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Check className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#F5F0E6]">System Operational</p>
+                    <p className="text-[11px] text-[#B9B0A0]">Database connected and authentication verified.</p>
+                  </div>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5">
+                  <div className="w-6 h-6 rounded-lg bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.2)] flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-[#F5F0E6]">Luxury Industrial UI</p>
+                    <p className="text-[11px] text-[#B9B0A0]">Charcoal Black and Champagne Gold palette applied.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-1 text-center">
+                <button
+                  onClick={() => setShowNotifications(false)}
+                  className="text-[11px] font-medium text-[#E5B45B] hover:text-[#D49E3F] transition-colors"
+                >
+                  Dismiss all
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* User Profile Area with Plan Information */}
+        <div className="flex items-center space-x-2.5 pl-2 sm:pl-3 border-l border-[rgba(185,176,160,0.12)]">
+          <div className="w-8 h-8 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-xs shadow-md">
+            {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
+          </div>
+          <div className="hidden sm:block text-left">
+            <span className="block text-xs font-semibold text-[#F5F0E6] leading-tight max-w-[120px] truncate">
+              {user?.name || user?.email || 'User'}
+            </span>
+            <span className="block text-[10px] text-[#E5B45B] font-medium leading-none mt-0.5">
+              {user?.role === 'admin' ? 'Enterprise Plan' : 'Free Tier'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </header>
+  );
+}

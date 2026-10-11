@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#0B0D0C] text-[#F5F0E6] antialiased font-sans min-h-screen selection:bg-[#E5B45B]/25 selection:text-[#E5B45B];
+  }
+}
+
+/* Custom subtle scrollbars for luxury industrial-tech aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0B0D0C;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #252419;
+  border-radius: 9999px;
+  border: 1px solid rgba(185, 176, 160, 0.1);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #E5B45B;
+}
+
+/* React Flow Visual Builder Theme Overrides */
+.react-flow__pane {
+  background-color: #0B0D0C !important;
+}
+
+.react-flow__controls {
+  background-color: #151715 !important;
+  border: 1px solid rgba(185, 176, 160, 0.16) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+.react-flow__controls-button {
+  background-color: #151715 !important;
+  border-bottom: 1px solid rgba(185, 176, 160, 0.08) !important;
+  color: #B9B0A0 !important;
+  fill: #B9B0A0 !important;
+  transition: all 0.15s ease-in-out !important;
+}
+
+.react-flow__controls-button:hover {
+  background-color: #252419 !important;
+  color: #E5B45B !important;
+  fill: #E5B45B !important;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
+}
+
+.react-flow__edge-path {
+  stroke: #E5B45B !important;
+  stroke-width: 2px !important;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #F5F0E6 !important;
+  stroke-width: 2.5px !important;
+}
+
+.react-flow__attribution {
+  background: rgba(21, 23, 21, 0.7) !important;
+  padding: 2px 6px !important;
+  border-radius: 6px !important;
+  border: 1px solid rgba(185, 176, 160, 0.1) !important;
+  color: #B9B0A0 !important;
+  font-size: 9px !important;
+}
+
+.react-flow__attribution a {
+  color: #E5B45B !important;
+}
