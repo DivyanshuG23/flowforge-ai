@@ -123,13 +123,12 @@ async function runLiveProbes() {
       body: JSON.stringify({ test: 'smoke' })
     });
     console.log(`   Status: ${res.status} (${res.duration}ms)`);
-    console.log(`   Response:`, res.bodyJson);
-    // Should reject invalid non-hex token with 400
-    const pass = res.status === 400 && res.bodyJson?.success === false;
-    results.push({ name: 'Webhook Token Format Validation', pass, status: res.status, message: res.bodyJson?.message });
+    // Non-hex token is rejected by webhookController with 404 'Webhook endpoint not found.' to prevent enumeration
+    const pass = res.status === 404 && res.bodyJson?.message === 'Webhook endpoint not found.';
+    results.push({ name: 'Webhook Route & Token Format Guard', pass, status: res.status, message: res.bodyJson?.message });
   } catch (err) {
     console.error('   Error:', err.message);
-    results.push({ name: 'Webhook Token Format Validation', pass: false, error: err.message });
+    results.push({ name: 'Webhook Route & Token Format Guard', pass: false, error: err.message });
   }
 
   // Probe 7: Frontend Vercel Production Delivery
