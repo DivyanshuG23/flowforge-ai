@@ -21,7 +21,16 @@ export default function Login() {
 
   const successNotice = location.state?.registeredMessage;
   const initialEmail = location.state?.registeredEmail || '';
-  const redirectPath = location.state?.from?.pathname || '/dashboard';
+  const isSessionExpired = new URLSearchParams(location.search).get('session_expired') === 'true';
+
+  const storedRedirect = (() => {
+    try {
+      return sessionStorage.getItem('flowforge_redirect_after_login');
+    } catch {
+      return null;
+    }
+  })();
+  const redirectPath = location.state?.from?.pathname || storedRedirect || '/dashboard';
 
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
@@ -63,6 +72,11 @@ export default function Login() {
       });
 
       if (response?.success && response?.token) {
+        try {
+          sessionStorage.removeItem('flowforge_redirect_after_login');
+        } catch {
+          // Ignore storage restrictions
+        }
         login(response.token, response.user);
         navigate(redirectPath, { replace: true });
       } else {
@@ -93,6 +107,17 @@ export default function Login() {
 
         {/* Card */}
         <div className="rounded-3xl border border-[rgba(185,176,160,0.12)] bg-[#151715] backdrop-blur-xl p-8 shadow-2xl space-y-6">
+          {/* Session Expired Notice */}
+          {isSessionExpired && !error && !successNotice && (
+            <div className="p-4 rounded-2xl bg-[#E5B45B]/15 border border-[#E5B45B]/30 flex items-start space-x-3 text-[#E5B45B] text-sm">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5 text-[#E5B45B]" />
+              <div>
+                <p className="font-semibold text-[#F5F0E6]">Session Expired</p>
+                <p className="text-xs text-[#E5B45B] mt-0.5">Your security session timed out. Please sign in to resume your workspace.</p>
+              </div>
+            </div>
+          )}
+
           {/* Post-Registration Success Banner */}
           {successNotice && !error && (
             <div className="p-4 rounded-2xl bg-[#059669]/15 border border-[#059669]/30 flex items-start space-x-3 text-[#059669] text-sm">
@@ -114,6 +139,7 @@ export default function Login() {
               </div>
             </div>
           )}
+
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {/* Email Field */}

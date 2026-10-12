@@ -88,6 +88,18 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      const merged = { ...prev, ...updatedFields };
+      try {
+        localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(merged));
+      } catch {
+        // storage unavailable
+      }
+      return merged;
+    });
+  };
+
   const value = {
     user,
     token,
@@ -95,9 +107,11 @@ export function AuthProvider({ children }) {
     loading,
     login,
     logout,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+
 }
 
 export function useAuth() {

@@ -60,7 +60,7 @@ function createOversizedStream(targetBytes) {
 // -------------------------------------------------------------
 console.log('--- 1. Secret Redaction & URL Sanitization Tests ---');
 
-const testGeminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyD_SECRET_KEY_1234567890';
+const testGeminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=AIzaSyD_SECRET_KEY_1234567890';
 const sanitizedUrl = sanitizeUrl(testGeminiUrl);
 assert(!sanitizedUrl.includes('AIzaSyD_SECRET_KEY_1234567890'), 'Gemini key is removed from URL');
 assert(sanitizedUrl.includes('key=%5BREDACTED%5D') || sanitizedUrl.includes('key=[REDACTED]'), 'URL replaces key parameter with [REDACTED]');
@@ -196,7 +196,7 @@ const geminiResult = await executeAiRequest({
 assert(geminiResult.success === true, 'Gemini execution succeeds');
 assert(geminiResult.text === 'Analysis completed: System CPU spike resolved.', 'Extracts correct Gemini text');
 assert(geminiResult.provider === 'gemini', 'Reports gemini provider');
-assert(geminiResult.model === 'gemini-1.5-flash', 'Uses default gemini model');
+assert(geminiResult.model === 'gemini-3.5-flash', 'Uses default gemini model');
 assert(geminiResult.usage.promptTokens === 18, 'Extracts prompt tokens');
 assert(geminiResult.usage.completionTokens === 32, 'Extracts completion tokens');
 assert(geminiResult.usage.totalTokens === 50, 'Extracts total tokens');
@@ -394,6 +394,24 @@ const res503 = await executeAiRequest({
 assert(res503.success === false, 'Handles HTTP 503 service error');
 assert(res503.error.includes('upstream service error (HTTP 503)'), 'Returns clean 503 service error message');
 assert(res503.status === 503, 'Preserves 503 status code');
+
+// HTTP 404 Model Not Found
+const mock404 = async () => ({
+  ok: false,
+  status: 404,
+  headers: new Headers(),
+  body: createMockStream('{"error": {"code": 404, "message": "models/deprecated-model is not found for API version v1beta"}}')
+});
+const res404 = await executeAiRequest({
+  provider: 'gemini',
+  model: 'deprecated-model',
+  prompt: 'Test 404',
+  _fetchFn: mock404
+});
+assert(res404.success === false, 'Handles HTTP 404 model not found');
+assert(res404.error.includes('AI model not found or unsupported by provider (HTTP 404)'), 'Returns actionable 404 error guidance');
+assert(res404.error.includes('models/deprecated-model is not found'), 'Extracts sanitized model not found message');
+assert(res404.status === 404, 'Preserves 404 status code');
 
 // -------------------------------------------------------------
 // 11. Timeout & Abort Handling Tests

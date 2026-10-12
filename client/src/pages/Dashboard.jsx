@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Workflow, 
   PlayCircle, 
@@ -16,20 +16,28 @@ import {
   ArrowUpRight,
   Trash2,
   Edit3,
+  Copy,
   Clock,
   Loader2,
   RefreshCw,
   Check,
-  X
+  X,
+  Search
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getWorkflows, deleteWorkflow, getErrorMessage } from '../services/api';
+import { 
+  getWorkflows, 
+  deleteWorkflow, 
+  duplicateWorkflow,
+  getUserExecutionStats, 
+  getUserExecutions, 
+  getErrorMessage 
+} from '../services/api';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopNav from '../components/dashboard/TopNav';
 import StatCard from '../components/dashboard/StatCard';
 import EmptyState from '../components/dashboard/EmptyState';
 import StatusBadge from '../components/dashboard/StatusBadge';
-import FeatureModal from '../components/dashboard/FeatureModal';
 
 const formatDate = (isoString) => {
   if (!isoString) return 'Just now';
@@ -50,7 +58,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [activeModalFeature, setActiveModalFeature] = useState(null);
 
   // Live Workflow State
   const [workflows, setWorkflows] = useState([]);
@@ -58,7 +65,23 @@ export default function Dashboard() {
   const [workflowError, setWorkflowError] = useState(null);
   const [workflowToDelete, setWorkflowToDelete] = useState(null);
   const [isDeletingId, setIsDeletingId] = useState(null);
+  const [isDuplicatingId, setIsDuplicatingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
+
+
+  // Execution Telemetry State
+  const [executionStats, setExecutionStats] = useState({
+    total: 0,
+    succeeded: 0,
+    failed: 0,
+    running: 0,
+    queued: 0,
+    successRate: 0
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [recentExecutions, setRecentExecutions] = useState([]);
+  const [isLoadingExecutions, setIsLoadingExecutions] = useState(true);
 
   // Fetch workflows belonging to authenticated user
   const fetchWorkflows = useCallback(async () => {
@@ -79,9 +102,34 @@ export default function Dashboard() {
     }
   }, []);
 
+  // Fetch live execution telemetry
+  const fetchExecutionData = useCallback(async () => {
+    setIsLoadingStats(true);
+    setIsLoadingExecutions(true);
+    try {
+      const [statsRes, execsRes] = await Promise.allSettled([
+        getUserExecutionStats(),
+        getUserExecutions({ limit: 5 })
+      ]);
+
+      if (statsRes.status === 'fulfilled' && statsRes.value?.success && statsRes.value.stats) {
+        setExecutionStats(statsRes.value.stats);
+      }
+      if (execsRes.status === 'fulfilled' && execsRes.value?.success && Array.isArray(execsRes.value.executions)) {
+        setRecentExecutions(execsRes.value.executions);
+      }
+    } catch (err) {
+      console.error('Failed to load execution telemetry:', err);
+    } finally {
+      setIsLoadingStats(false);
+      setIsLoadingExecutions(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchWorkflows();
-  }, [fetchWorkflows]);
+    fetchExecutionData();
+  }, [fetchWorkflows, fetchExecutionData]);
 
   // Handle workflow deletion
   const confirmDeleteWorkflow = async () => {
@@ -113,42 +161,35 @@ export default function Dashboard() {
     }
   };
 
-  // Roadmap feature data for preview modal
-  const roadmapFeatures = {
-    createWorkflow: {
-      type: 'workflow',
-      badge: 'Phase 4 Canvas',
-      title: 'Visual Workflow Builder',
-      description: 'The React Flow drag-and-drop workflow canvas with custom trigger nodes, webhooks, and AI agent integration is scheduled for Phase 4.',
-      highlights: [
-        'Visual node-based orchestration canvas',
-        'Autonomous agent trigger nodes & self-healing handlers',
-        'Real-time pipeline validation and dry-run execution'
-      ]
-    },
-    browseTemplates: {
-      type: 'template',
-      badge: 'Pre-Built Blueprints',
-      title: 'Workflow Blueprint Library',
-      description: 'Enterprise workflow templates including webhook sync, automated customer notifications, and anomaly auto-healers will be unlocked with the canvas in Phase 4.',
-      highlights: [
-        'Pre-configured CRM & database sync pipelines',
-        'AI multi-model escalation and routing chains',
-        'Self-healing automated retry and alerting blueprints'
-      ]
-    },
-    viewExecutions: {
-      type: 'execution',
-      badge: 'Phase 5 Engine',
-      title: 'Execution Engine & Telemetry',
-      description: 'Comprehensive runtime monitoring, step-by-step logs, latency tracking, and error telemetry are scheduled for Phase 5.',
-      highlights: [
-        'Real-time websocket event streams',
-        'Live node-level execution tracing and latency metrics',
-        'Automated error capturing and recovery triggers'
-      ]
+  // Handle workflow duplication
+  const handleDuplicateWorkflow = async (workflow) => {
+    if (!workflow?._id || isDuplicatingId) return;
+    const id = workflow._id;
+    setIsDuplicatingId(id);
+    try {
+      const response = await duplicateWorkflow(id);
+      if (response?.success && response.workflow) {
+        setWorkflows((prev) => [response.workflow, ...prev]);
+        setActionFeedback({
+          type: 'success',
+          message: `Duplicated "${workflow.name}" as "${response.workflow.name}".`
+        });
+        setTimeout(() => setActionFeedback(null), 4000);
+      } else {
+        throw new Error(response?.message || 'Failed to duplicate workflow.');
+      }
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setActionFeedback({
+        type: 'error',
+        message: msg || 'Failed to duplicate workflow.'
+      });
+      setTimeout(() => setActionFeedback(null), 4000);
+    } finally {
+      setIsDuplicatingId(null);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-[#0B0D0C] text-[#F5F0E6] flex font-sans selection:bg-[#E5B45B]/20 selection:text-[#E5B45B]">
@@ -156,13 +197,17 @@ export default function Dashboard() {
       <Sidebar
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
-        onSelectFeature={(feature) => setActiveModalFeature(feature)}
       />
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col lg:pl-64 min-w-0">
         {/* Top Navigation */}
-        <TopNav onOpenMobileSidebar={() => setMobileSidebarOpen(true)} />
+        <TopNav 
+          onOpenMobileSidebar={() => setMobileSidebarOpen(true)} 
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+        />
+
 
         {/* Dashboard Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl w-full mx-auto">
@@ -230,7 +275,7 @@ export default function Dashboard() {
                 </button>
 
                 <button
-                  onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
+                  onClick={() => navigate('/templates')}
                   className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-[#151715] hover:bg-[#1C1F1C] text-[#F5F0E6] text-sm font-medium border border-[rgba(185,176,160,0.15)] transition-colors"
                 >
                   <Layers className="w-4 h-4 text-[#B9B0A0]" />
@@ -262,31 +307,51 @@ export default function Dashboard() {
                 }
                 icon={Workflow}
                 accentColor="gold"
-                badge="Phase 4"
+                badge="Active"
               />
               <StatCard
                 label="Successful Runs"
-                value="0"
-                note="Telemetry armed"
+                value={isLoadingStats ? '...' : executionStats.succeeded.toString()}
+                note={
+                  isLoadingStats
+                    ? 'Syncing...'
+                    : executionStats.total > 0
+                    ? `${executionStats.successRate}% completion rate`
+                    : 'Awaiting execution'
+                }
                 icon={CheckCircle2}
                 accentColor="emerald"
-                badge="100% Health"
+                badge={executionStats.total > 0 && executionStats.failed === 0 ? '100% Health' : 'Completed'}
               />
               <StatCard
                 label="Failed Runs"
-                value="0"
-                note="0 runtime anomalies"
+                value={isLoadingStats ? '...' : executionStats.failed.toString()}
+                note={
+                  isLoadingStats
+                    ? 'Syncing...'
+                    : executionStats.failed === 0
+                    ? '0 runtime anomalies'
+                    : `${executionStats.failed} anomaly recorded`
+                }
                 icon={AlertCircle}
                 accentColor="ruby"
-                badge="Zero Errors"
+                badge={executionStats.failed === 0 ? 'Zero Errors' : 'Anomalies'}
               />
               <StatCard
                 label="Total Executions"
-                value="0"
-                note="Execution engine idle"
+                value={isLoadingStats ? '...' : executionStats.total.toString()}
+                note={
+                  isLoadingStats
+                    ? 'Syncing...'
+                    : executionStats.running > 0
+                    ? `${executionStats.running} running now`
+                    : executionStats.total === 0
+                    ? 'Engine idle'
+                    : `${executionStats.total} total runs`
+                }
                 icon={PlayCircle}
                 accentColor="neutral"
-                badge="Phase 5"
+                badge={executionStats.total > 0 ? 'Live' : 'Idle'}
               />
             </div>
           </section>
@@ -394,73 +459,132 @@ export default function Dashboard() {
               )}
 
               {/* State 4: Live Workflows List */}
-              {!isLoadingWorkflows && !workflowError && workflows.length > 0 && (
-                <div className="space-y-3">
-                  {workflows.map((wf) => {
-                    const nodeCount = Array.isArray(wf.nodes) ? wf.nodes.length : 0;
-                    const edgeCount = Array.isArray(wf.edges) ? wf.edges.length : 0;
-                    const updatedDate = formatDate(wf.updatedAt || wf.createdAt);
+              {!isLoadingWorkflows && !workflowError && workflows.length > 0 && (() => {
+                const trimmedQuery = searchQuery.trim().toLowerCase();
+                const filteredWorkflows = trimmedQuery
+                  ? workflows.filter(
+                      (wf) =>
+                        wf.name.toLowerCase().includes(trimmedQuery) ||
+                        (wf.description && wf.description.toLowerCase().includes(trimmedQuery))
+                    )
+                  : workflows;
 
-                    return (
-                      <div
-                        key={wf._id}
-                        className="group p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                if (trimmedQuery && filteredWorkflows.length === 0) {
+                  return (
+                    <div className="p-8 rounded-2xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-center space-y-3">
+                      <Search className="w-8 h-8 text-[#B9B0A0]/60 mx-auto" />
+                      <h4 className="text-sm font-semibold text-[#F5F0E6]">No Workflows Found</h4>
+                      <p className="text-xs text-[#B9B0A0]">
+                        No workflows match &ldquo;{searchQuery}&rdquo;. Try a different keyword or clear your filter.
+                      </p>
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#151715] hover:bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)] text-xs font-semibold transition-colors"
                       >
-                        {/* Info */}
-                        <div className="flex items-start sm:items-center space-x-3.5 min-w-0">
-                          <div className="w-9 h-9 rounded-lg bg-[#151715] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] flex-shrink-0 group-hover:scale-105 transition-transform">
-                            <Workflow className="w-4 h-4" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="flex items-center space-x-2">
-                              <h3 className="text-sm font-bold text-[#F5F0E6] truncate group-hover:text-[#E5B45B] transition-colors">
-                                {wf.name}
-                              </h3>
-                              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#059669] border border-[#059669]/25 flex-shrink-0">
-                                Saved
-                              </span>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#B9B0A0] mt-1 font-mono">
-                              <span>{nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}</span>
-                              <span className="text-[rgba(185,176,160,0.25)]">•</span>
-                              <span>{edgeCount} {edgeCount === 1 ? 'connection' : 'connections'}</span>
-                              <span className="text-[rgba(185,176,160,0.25)]">•</span>
-                              <span className="text-[#B9B0A0]/70 flex items-center space-x-1">
-                                <Clock className="w-3 h-3 text-[#B9B0A0]/50" />
-                                <span>{updatedDate}</span>
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                        <X className="w-3.5 h-3.5" />
+                        <span>Clear Search</span>
+                      </button>
+                    </div>
+                  );
+                }
 
-                        {/* Actions */}
-                        <div className="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
-                          <button
-                            onClick={() => navigate(`/workflows/${wf._id}`)}
-                            className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#151715] hover:bg-[#252419] text-[#F5F0E6] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.15)] hover:border-[#E5B45B]/40 text-xs font-semibold transition-colors"
-                            title="Open in Visual Builder"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 text-[#E5B45B]" />
-                            <span>Open</span>
-                          </button>
-                          <button
-                            onClick={() => setWorkflowToDelete(wf)}
-                            disabled={isDeletingId === wf._id}
-                            className="p-1.5 rounded-lg bg-[#151715] hover:bg-[#C83C3C]/15 text-[#B9B0A0] hover:text-[#C83C3C] border border-[rgba(185,176,160,0.15)] hover:border-[#C83C3C]/40 transition-colors disabled:opacity-50"
-                            title="Delete Workflow"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                return (
+                  <div className="space-y-3">
+                    {trimmedQuery && (
+                      <div className="flex items-center justify-between px-1 text-xs text-[#B9B0A0]">
+                        <span>Showing {filteredWorkflows.length} matching {filteredWorkflows.length === 1 ? 'workflow' : 'workflows'}</span>
+                        <button
+                          onClick={() => setSearchQuery('')}
+                          className="text-[#E5B45B] hover:underline text-xs flex items-center space-x-1"
+                        >
+                          <X className="w-3 h-3" />
+                          <span>Clear filter</span>
+                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
+                    )}
+
+                    {filteredWorkflows.map((wf) => {
+                      const nodeCount = Array.isArray(wf.nodes) ? wf.nodes.length : 0;
+                      const edgeCount = Array.isArray(wf.edges) ? wf.edges.length : 0;
+                      const updatedDate = formatDate(wf.updatedAt || wf.createdAt);
+
+                      return (
+                        <div
+                          key={wf._id}
+                          className="group p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                        >
+                          {/* Info */}
+                          <div className="flex items-start sm:items-center space-x-3.5 min-w-0">
+                            <div className="w-9 h-9 rounded-lg bg-[#151715] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] flex-shrink-0 group-hover:scale-105 transition-transform">
+                              <Workflow className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center space-x-2">
+                                <h3 className="text-sm font-bold text-[#F5F0E6] truncate group-hover:text-[#E5B45B] transition-colors">
+                                  {wf.name}
+                                </h3>
+                                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#059669] border border-[#059669]/25 flex-shrink-0">
+                                  Saved
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#B9B0A0] mt-1 font-mono">
+                                <span>{nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}</span>
+                                <span className="text-[rgba(185,176,160,0.25)]">•</span>
+                                <span>{edgeCount} {edgeCount === 1 ? 'connection' : 'connections'}</span>
+                                <span className="text-[rgba(185,176,160,0.25)]">•</span>
+                                <span className="text-[#B9B0A0]/70 flex items-center space-x-1">
+                                  <Clock className="w-3 h-3 text-[#B9B0A0]/50" />
+                                  <span>{updatedDate}</span>
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Actions */}
+                          <div className="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
+                            <button
+                              onClick={() => navigate(`/workflows/${wf._id}`)}
+                              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-[#151715] hover:bg-[#252419] text-[#F5F0E6] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.15)] hover:border-[#E5B45B]/40 text-xs font-semibold transition-colors"
+                              title="Open in Visual Builder"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 text-[#E5B45B]" />
+                              <span>Open</span>
+                            </button>
+                            <button
+                              onClick={() => handleDuplicateWorkflow(wf)}
+                              disabled={isDuplicatingId === wf._id || isDeletingId === wf._id}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.15)] hover:border-[#E5B45B]/40 text-xs font-semibold transition-colors disabled:opacity-50"
+                              title="Duplicate Workflow"
+                              aria-label={`Duplicate ${wf.name}`}
+                            >
+                              {isDuplicatingId === wf._id ? (
+                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E5B45B]" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                              <span className="hidden sm:inline">Duplicate</span>
+                            </button>
+                            <button
+                              onClick={() => setWorkflowToDelete(wf)}
+                              disabled={isDeletingId === wf._id || isDuplicatingId === wf._id}
+                              className="p-1.5 rounded-lg bg-[#151715] hover:bg-[#C83C3C]/15 text-[#B9B0A0] hover:text-[#C83C3C] border border-[rgba(185,176,160,0.15)] hover:border-[#C83C3C]/40 transition-colors disabled:opacity-50"
+                              title="Delete Workflow"
+                              aria-label={`Delete ${wf.name}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+
             </section>
 
             {/* Execution Activity (1 Column on Desktop) */}
-            <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl space-y-6">
+            <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl space-y-5">
               <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-4">
                 <div className="flex items-center space-x-2.5">
                   <Activity className="w-5 h-5 text-[#059669]" />
@@ -469,53 +593,112 @@ export default function Dashboard() {
                   </h2>
                 </div>
 
-                <div className="flex items-center space-x-1.5 text-xs text-[#059669]">
-                  <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
-                  <span>Telemetry Live</span>
+                <div className="flex items-center space-x-2">
+                  <Link
+                    to="/executions"
+                    className="text-xs font-semibold text-[#E5B45B] hover:text-[#D49E3F] transition-colors flex items-center space-x-1"
+                  >
+                    <span>View All</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
 
               {/* Status Specs Panel */}
-              <div className="space-y-3">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#B9B0A0]/70">
-                  Execution Status Indicators:
-                </span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#B9B0A0]/70">
+                    Execution Telemetry:
+                  </span>
+                  <div className="flex items-center space-x-1.5 text-[11px] text-[#059669]">
+                    <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+                    <span>Telemetry Live</span>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-2 gap-2">
                   <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex flex-col space-y-1">
                     <span className="text-[10px] text-[#B9B0A0]">Completed</span>
-                    <StatusBadge status="success" label="Success" />
+                    <StatusBadge status="success" label={`${executionStats.succeeded} Succeeded`} />
                   </div>
                   <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex flex-col space-y-1">
                     <span className="text-[10px] text-[#B9B0A0]">Anomalies</span>
-                    <StatusBadge status="failure" label="Failed" />
+                    <StatusBadge status="failure" label={`${executionStats.failed} Failed`} />
                   </div>
                   <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex flex-col space-y-1">
                     <span className="text-[10px] text-[#B9B0A0]">In Progress</span>
-                    <StatusBadge status="running" label="Running" />
+                    <StatusBadge status="running" label={`${executionStats.running} Running`} />
                   </div>
                   <div className="p-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex flex-col space-y-1">
                     <span className="text-[10px] text-[#B9B0A0]">Queued</span>
-                    <StatusBadge status="pending" label="Pending" />
+                    <StatusBadge status="pending" label={`${executionStats.queued} Queued`} />
                   </div>
                 </div>
               </div>
 
-              {/* Professional Empty State for Executions */}
-              <div className="p-5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] text-center space-y-2">
-                <Terminal className="w-6 h-6 text-[#B9B0A0] mx-auto opacity-70" />
-                <h4 className="text-xs font-semibold text-[#F5F0E6]">No Execution History</h4>
-                <p className="text-[11px] text-[#B9B0A0] leading-relaxed">
-                  Execution telemetry and step completion durations stream here automatically once triggers fire.
-                </p>
-                <div className="pt-1">
-                  <button
-                    onClick={() => setActiveModalFeature(roadmapFeatures.viewExecutions)}
-                    className="text-xs font-medium text-[#E5B45B] hover:text-[#D49E3F] transition-colors"
-                  >
-                    View Telemetry Spec
-                  </button>
+              {/* Real Recent Executions List or Empty State */}
+              {isLoadingExecutions ? (
+                <div className="py-8 text-center space-y-2">
+                  <Loader2 className="w-5 h-5 text-[#E5B45B] animate-spin mx-auto" />
+                  <p className="text-xs text-[#B9B0A0]">Loading telemetry logs...</p>
                 </div>
-              </div>
+              ) : recentExecutions.length === 0 ? (
+                <div className="p-5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] text-center space-y-2">
+                  <Terminal className="w-6 h-6 text-[#B9B0A0] mx-auto opacity-70" />
+                  <h4 className="text-xs font-semibold text-[#F5F0E6]">No Execution History</h4>
+                  <p className="text-[11px] text-[#B9B0A0] leading-relaxed">
+                    Execution telemetry and step completion durations stream here automatically once triggers fire.
+                  </p>
+                  <div className="pt-1">
+                    <button
+                      onClick={() => navigate('/workflows/new')}
+                      className="text-xs font-medium text-[#E5B45B] hover:text-[#D49E3F] transition-colors"
+                    >
+                      Run a Workflow →
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#B9B0A0]/70 block">
+                    Recent Runs:
+                  </span>
+                  <div className="space-y-2">
+                    {recentExecutions.map((exec) => {
+                      const wfName = exec.workflow?.name || 'Untitled Workflow';
+                      const isSuccess = exec.status === 'succeeded';
+                      const isFailed = exec.status === 'failed';
+                      const isRunning = exec.status === 'running';
+
+                      return (
+                        <div
+                          key={exec._id}
+                          onClick={() => navigate(`/executions?id=${exec._id}`)}
+                          className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] hover:border-[rgba(229,180,91,0.25)] hover:bg-[#111311] transition-all cursor-pointer flex items-center justify-between group"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <span className="text-xs font-semibold text-[#F5F0E6] truncate block group-hover:text-[#E5B45B] transition-colors">
+                              {wfName}
+                            </span>
+                            <div className="flex items-center space-x-2 text-[10px] text-[#B9B0A0]/70 mt-0.5">
+                              <span className="font-mono">
+                                {exec.durationMs < 1000 ? `${exec.durationMs}ms` : `${(exec.durationMs / 1000).toFixed(2)}s`}
+                              </span>
+                              <span>•</span>
+                              <span>{formatDate(exec.createdAt || exec.startedAt)}</span>
+                            </div>
+                          </div>
+
+                          <StatusBadge
+                            status={isSuccess ? 'success' : isFailed ? 'failure' : isRunning ? 'running' : 'pending'}
+                            label={isSuccess ? 'Success' : isFailed ? 'Failed' : isRunning ? 'Running' : 'Queued'}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </section>
           </div>
 
@@ -560,8 +743,17 @@ export default function Dashboard() {
 
               {/* Action 2: Browse Templates */}
               <div
-                onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
-                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-3"
+                role="button"
+                tabIndex={0}
+                aria-label="Browse Templates"
+                onClick={() => navigate('/templates')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate('/templates');
+                  }
+                }}
+                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-3 focus:outline-none focus:ring-2 focus:ring-[#E5B45B]/40"
               >
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -587,15 +779,24 @@ export default function Dashboard() {
 
               {/* Action 3: View Executions */}
               <div
-                onClick={() => setActiveModalFeature(roadmapFeatures.viewExecutions)}
-                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#059669]/40 hover:shadow-glow-emerald transition-all duration-300 space-y-3"
+                role="button"
+                tabIndex={0}
+                aria-label="View Executions"
+                onClick={() => navigate('/executions')}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate('/executions');
+                  }
+                }}
+                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#059669]/40 hover:shadow-glow-emerald transition-all duration-300 space-y-3 focus:outline-none focus:ring-2 focus:ring-[#059669]/40"
               >
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-[#059669]/15 border border-[#059669]/30 text-[#059669] flex items-center justify-center group-hover:scale-105 transition-transform">
                     <PlayCircle className="w-5 h-5" />
                   </div>
                   <span className="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-[#059669]/10 text-[#059669] border border-[#059669]/20">
-                    Phase 5
+                    Live
                   </span>
                 </div>
                 <div>
@@ -611,6 +812,7 @@ export default function Dashboard() {
                   <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
                 </div>
               </div>
+
             </div>
           </section>
 
@@ -631,7 +833,7 @@ export default function Dashboard() {
               </div>
 
               <button
-                onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
+                onClick={() => navigate('/templates')}
                 className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#252419] hover:bg-[#2e2d20] text-[#E5B45B] border border-[rgba(229,180,91,0.3)] text-xs sm:text-sm font-semibold transition-all hover:scale-[1.02]"
               >
                 <span>Browse All Templates</span>
@@ -642,44 +844,44 @@ export default function Dashboard() {
             {/* 3 Featured Template Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div 
-                onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
+                onClick={() => navigate('/templates')}
                 className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">Data Bridge</span>
-                  <span className="text-[10px] text-[#B9B0A0]">Webhook Trigger</span>
+                  <span className="text-[10px] text-[#B9B0A0]">REST API</span>
                 </div>
-                <h4 className="text-sm font-semibold text-[#F5F0E6]">Multi-Cloud Database Sync</h4>
+                <h4 className="text-sm font-semibold text-[#F5F0E6]">REST API Data Bridge</h4>
                 <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Real-time document sync between MongoDB and cloud stores with automated conflict reconciliation.
+                  Fetches remote payload, validates response code 200, and formats outbound dispatch.
                 </p>
               </div>
 
               <div 
-                onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
+                onClick={() => navigate('/templates')}
                 className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#059669]/30 transition-all space-y-2"
               >
                 <div className="flex items-center justify-between">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-[#059669]">Self-Healing</span>
-                  <span className="text-[10px] text-[#B9B0A0]">Anomaly Listener</span>
+                  <span className="text-[10px] text-[#B9B0A0]">AI Triage</span>
                 </div>
                 <h4 className="text-sm font-semibold text-[#F5F0E6]">AI Incident Triage & Auto-Retry</h4>
                 <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Detects API rate limits or network drops, applying exponential backoff and alternate endpoint routing.
+                  Analyzes operational logs with Gemini AI, branching to auto-heal or urgent escalation.
                 </p>
               </div>
 
               <div 
-                onClick={() => setActiveModalFeature(roadmapFeatures.browseTemplates)}
+                onClick={() => navigate('/templates')}
                 className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all space-y-2"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">Operations</span>
-                  <span className="text-[10px] text-[#B9B0A0]">Scheduled Cron</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">AI Pipeline</span>
+                  <span className="text-[10px] text-[#B9B0A0]">Classification</span>
                 </div>
-                <h4 className="text-sm font-semibold text-[#F5F0E6]">Enterprise Security Audit Stream</h4>
+                <h4 className="text-sm font-semibold text-[#F5F0E6]">Sentiment Routing Pipeline</h4>
                 <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Hourly token scan and authorization log aggregation with encrypted summary dispatches.
+                  Classifies customer feedback sentiment using LLM reasoning and routes to VIP care or standard log.
                 </p>
               </div>
             </div>
@@ -706,13 +908,6 @@ export default function Dashboard() {
           </section>
         </main>
       </div>
-
-      {/* Feature Preview Modal */}
-      <FeatureModal
-        isOpen={Boolean(activeModalFeature)}
-        onClose={() => setActiveModalFeature(null)}
-        feature={activeModalFeature}
-      />
 
       {/* Delete Workflow Confirmation Modal */}
       {workflowToDelete && (

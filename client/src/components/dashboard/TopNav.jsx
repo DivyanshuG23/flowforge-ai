@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Menu, 
   Search, 
@@ -8,12 +8,42 @@ import {
   Sparkles,
   Command
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
-export default function TopNav({ onOpenMobileSidebar }) {
+export default function TopNav({ 
+  onOpenMobileSidebar, 
+  searchQuery: propSearchQuery, 
+  onSearchChange: propOnSearchChange 
+}) {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [internalQuery, setInternalQuery] = useState('');
   const [showNotifications, setShowNotifications] = useState(false);
+  const searchInputRef = useRef(null);
+
+  const isControlled = propSearchQuery !== undefined;
+  const currentQuery = isControlled ? propSearchQuery : internalQuery;
+
+  const handleQueryChange = (e) => {
+    const val = e.target.value;
+    if (isControlled) {
+      if (propOnSearchChange) propOnSearchChange(val);
+    } else {
+      setInternalQuery(val);
+    }
+  };
+
+  // Keyboard shortcut listener for Cmd+K / Ctrl+K
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-[#0B0D0C]/85 backdrop-blur-md border-b border-[rgba(185,176,160,0.1)] px-4 sm:px-6 lg:px-8 flex items-center justify-between">
@@ -33,10 +63,12 @@ export default function TopNav({ onOpenMobileSidebar }) {
             <Search className="w-4 h-4" />
           </div>
           <input
+            ref={searchInputRef}
             type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            value={currentQuery}
+            onChange={handleQueryChange}
             placeholder="Search workflows, executions, templates..."
+            aria-label="Search workflows, executions, templates"
             className="w-full pl-9 pr-14 py-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] text-[#F5F0E6] placeholder-[#B9B0A0]/60 text-xs sm:text-sm focus:outline-none focus:border-[#E5B45B] focus:ring-2 focus:ring-[#E5B45B]/15 transition-all"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -47,6 +79,7 @@ export default function TopNav({ onOpenMobileSidebar }) {
           </div>
         </div>
       </div>
+
 
       {/* Right: Telemetry pill, Notification icon, and User Profile with Plan */}
       <div className="flex items-center space-x-3 sm:space-x-4">
@@ -112,19 +145,23 @@ export default function TopNav({ onOpenMobileSidebar }) {
         </div>
 
         {/* User Profile Area with Plan Information */}
-        <div className="flex items-center space-x-2.5 pl-2 sm:pl-3 border-l border-[rgba(185,176,160,0.12)]">
-          <div className="w-8 h-8 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-xs shadow-md">
+        <Link 
+          to="/settings"
+          title="Workspace & Security Settings"
+          className="flex items-center space-x-2.5 pl-2 sm:pl-3 border-l border-[rgba(185,176,160,0.12)] group hover:opacity-90 transition-opacity"
+        >
+          <div className="w-8 h-8 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-xs shadow-md group-hover:border-[#E5B45B] transition-colors">
             {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
           </div>
           <div className="hidden sm:block text-left">
-            <span className="block text-xs font-semibold text-[#F5F0E6] leading-tight max-w-[120px] truncate">
+            <span className="block text-xs font-semibold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors leading-tight max-w-[120px] truncate">
               {user?.name || user?.email || 'User'}
             </span>
             <span className="block text-[10px] text-[#E5B45B] font-medium leading-none mt-0.5">
               {user?.role === 'admin' ? 'Enterprise Plan' : 'Free Tier'}
             </span>
           </div>
-        </div>
+        </Link>
       </div>
     </header>
   );

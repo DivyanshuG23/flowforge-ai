@@ -146,6 +146,71 @@ const workflowSchema = new mongoose.Schema(
         },
         message: 'A workflow cannot exceed 200 edges.'
       }
+    },
+    schedule: {
+      enabled: {
+        type: Boolean,
+        default: false,
+        index: true
+      },
+      cron: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      timezone: {
+        type: String,
+        trim: true,
+        default: 'UTC'
+      },
+      lastRunAt: {
+        type: Date,
+        default: null
+      },
+      nextRunAt: {
+        type: Date,
+        default: null
+      },
+      lastStatus: {
+        type: String,
+        enum: ['succeeded', 'failed', 'skipped', null],
+        default: null
+      },
+      lockedUntil: {
+        type: Date,
+        default: null
+      },
+      lockedBy: {
+        type: String,
+        trim: true,
+        default: null
+      }
+    },
+    webhook: {
+      enabled: {
+        type: Boolean,
+        default: false,
+        index: true
+      },
+      token: {
+        type: String,
+        trim: true,
+        sparse: true,
+        index: true
+      },
+      secret: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      lastTriggeredAt: {
+        type: Date,
+        default: null
+      },
+      totalTriggers: {
+        type: Number,
+        default: 0
+      }
     }
   },
   {

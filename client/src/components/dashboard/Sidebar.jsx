@@ -35,58 +35,32 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
     {
       id: 'executions',
       label: 'Executions',
+      path: '/executions',
       icon: PlayCircle,
-      badge: 'Phase 5',
+      active: location.pathname === '/executions',
+      badge: 'Live',
       badgeColor: 'text-[#059669] bg-[#059669]/10 border-[#059669]/20',
-      action: () => onSelectFeature({
-        type: 'execution',
-        badge: 'Phase 5 Engine',
-        title: 'Execution Engine & Telemetry',
-        description: 'Comprehensive runtime monitoring, step-by-step logs, latency tracking, and error telemetry are scheduled for Phase 5.',
-        highlights: [
-          'Real-time websocket event streams',
-          'Live node-level execution tracing and latency metrics',
-          'Automated error capturing and recovery triggers'
-        ]
-      })
     },
     {
       id: 'templates',
       label: 'Templates',
+      path: '/templates',
       icon: Layers,
-      badge: 'Preview',
+      active: location.pathname === '/templates',
+      badge: 'Library',
       badgeColor: 'text-[#E5B45B] bg-[#E5B45B]/10 border-[#E5B45B]/20',
-      action: () => onSelectFeature({
-        type: 'template',
-        badge: 'Pre-Built Blueprints',
-        title: 'Workflow Blueprint Library',
-        description: 'Enterprise workflow templates including webhook sync, automated customer notifications, and anomaly auto-healers will be unlocked with the canvas.',
-        highlights: [
-          'Pre-configured CRM & database sync pipelines',
-          'AI multi-model escalation and routing chains',
-          'Self-healing automated retry and alerting blueprints'
-        ]
-      })
     },
     {
       id: 'settings',
       label: 'Settings',
+      path: '/settings',
       icon: Settings,
-      badge: 'System',
-      badgeColor: 'text-[#B9B0A0] bg-[#B9B0A0]/10 border-[#B9B0A0]/20',
-      action: () => onSelectFeature({
-        type: 'settings',
-        badge: 'Platform Config',
-        title: 'Workspace Settings',
-        description: 'Custom API keys, integration credentials, webhook secrets, and notification preferences will be configurable here.',
-        highlights: [
-          'Encrypted credential store for external services',
-          'Team role management & audit log tracking',
-          'AI model selection and API rate limit controls'
-        ]
-      })
+      active: location.pathname === '/settings',
+      badge: 'Config',
+      badgeColor: 'text-[#059669] bg-[#059669]/10 border-[#059669]/20',
     },
   ];
+
 
   return (
     <>
@@ -155,6 +129,12 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
                       <Icon className={`w-4 h-4 ${item.active ? 'text-[#E5B45B]' : 'text-[#B9B0A0]'}`} />
                       <span>{item.label}</span>
                     </div>
+
+                    {item.badge && (
+                      <span className={`text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full border ${item.badgeColor || 'bg-[#252419] text-[#E5B45B] border-[rgba(229,180,91,0.25)]'}`}>
+                        {item.badge}
+                      </span>
+                    )}
                   </Link>
                 );
               }
@@ -186,13 +166,20 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
           {/* User Profile Section & Sign Out Button */}
           <div className="p-4 border-t border-[rgba(185,176,160,0.08)] bg-[#0B0D0C]">
             <div className="p-3.5 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-xs shadow-md">
+              <Link
+                to="/settings"
+                onClick={() => {
+                  if (onClose) onClose();
+                }}
+                className="flex items-center space-x-3 group/profile hover:opacity-90 transition-opacity"
+                title="Manage Workspace & Profile Settings"
+              >
+                <div className="w-9 h-9 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-xs shadow-md group-hover/profile:border-[#E5B45B]">
                   {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="w-4 h-4" />}
                 </div>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-[#F5F0E6] truncate">
+                  <p className="text-xs font-semibold text-[#F5F0E6] truncate group-hover/profile:text-[#E5B45B] transition-colors">
                     {user?.name || user?.email || 'User'}
                   </p>
                   <div className="flex items-center space-x-1.5 mt-0.5">
@@ -204,7 +191,7 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               <button
                 onClick={logout}

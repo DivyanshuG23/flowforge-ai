@@ -51,6 +51,7 @@ export const executeWorkflow = async (req, res) => {
       completedAt: new Date(),
       durationMs: executionResult.durationMs,
       nodeExecutions: executionResult.nodeExecutions,
+      triggerSource: 'manual',
       error: executionResult.error || null
     });
 
@@ -125,6 +126,104 @@ export const getWorkflowExecutions = async (req, res) => {
 };
 
 /**
+ * @route   GET /api/executions
+ * @desc    Get execution history for the authenticated user with pagination and filtering
+ * @access  Private (JWT required)
+ */
+export const getUserExecutions = async (req, res) => {
+  try {
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
+    const skip = (page - 1) * limit;
+
+    // Strict user-level data isolation
+    const filter = { user: req.user.id };
+
+    // Filter by status if specified and valid
+    const validStatuses = ['queued', 'running', 'succeeded', 'failed'];
+    if (req.query.status && validStatuses.includes(req.query.status)) {
+      filter.status = req.query.status;
+    }
+
+    // Filter by specific workflow if specified
+    if (req.query.workflowId && mongoose.Types.ObjectId.isValid(req.query.workflowId)) {
+      filter.workflow = req.query.workflowId;
+    }
+
+    // Filter by triggerSource if specified
+    const validTriggers = ['manual', 'scheduled', 'webhook'];
+    if (req.query.triggerSource && validTriggers.includes(req.query.triggerSource)) {
+      filter.triggerSource = req.query.triggerSource;
+    }
+
+    const [totalExecutions, executions] = await Promise.all([
+      Execution.countDocuments(filter),
+      Execution.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('workflow', 'name description')
+        .lean()
+    ]);
+
+    const totalPages = Math.ceil(totalExecutions / limit) || 1;
+
+    return res.status(200).json({
+      success: true,
+      count: executions.length,
+      totalExecutions,
+      totalPages,
+      currentPage: page,
+      limit,
+      executions
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve executions.'
+    });
+  }
+};
+
+/**
+ * @route   GET /api/executions/stats
+ * @desc    Get aggregated execution metrics for the authenticated user
+ * @access  Private (JWT required)
+ */
+export const getUserExecutionStats = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const [total, succeeded, failed, running, queued] = await Promise.all([
+      Execution.countDocuments({ user: userId }),
+      Execution.countDocuments({ user: userId, status: 'succeeded' }),
+      Execution.countDocuments({ user: userId, status: 'failed' }),
+      Execution.countDocuments({ user: userId, status: 'running' }),
+      Execution.countDocuments({ user: userId, status: 'queued' })
+    ]);
+
+    const successRate = total > 0 ? Math.round((succeeded / total) * 100) : 0;
+
+    return res.status(200).json({
+      success: true,
+      stats: {
+        total,
+        succeeded,
+        failed,
+        running,
+        queued,
+        successRate
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve execution statistics.'
+    });
+  }
+};
+
+/**
  * @route   GET /api/executions/:id
  * @desc    Fetch execution telemetry trace by execution ID
  * @access  Private (JWT required)
@@ -143,7 +242,7 @@ export const getExecutionById = async (req, res) => {
     const execution = await Execution.findOne({
       _id: id,
       user: req.user.id
-    });
+    }).populate('workflow', 'name description');
 
     if (!execution) {
       return res.status(404).json({
@@ -163,3 +262,4 @@ export const getExecutionById = async (req, res) => {
     });
   }
 };
+

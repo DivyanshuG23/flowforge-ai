@@ -48,6 +48,29 @@ export const executionRateLimiter = rateLimit({
 });
 
 /**
+ * Webhook Trigger Rate Limiter
+ * Protects public webhook ingestion endpoints against volumetric flooding and replay bursts.
+ * Keyed by webhook token and client IP.
+ */
+export const webhookRateLimiter = rateLimit({
+  windowMs: parseInt(process.env.WEBHOOK_RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000, // 1 minute
+  max: parseInt(process.env.WEBHOOK_RATE_LIMIT_MAX, 10) || (process.env.NODE_ENV === 'production' ? 60 : 1000),
+  standardHeaders: 'draft-7',
+  legacyHeaders: true,
+  skip: () => process.env.NODE_ENV === 'test' && process.env.ENABLE_TEST_RATE_LIMIT !== 'true',
+  keyGenerator: (req) => {
+    return req.params?.token ? `hook_${req.params.token}` : (req.ip || 'unknown');
+  },
+  handler: (req, res) => {
+    console.warn(`[RateLimit] Webhook rate limit exceeded for IP: ${req.ip}`);
+    res.status(429).json({
+      success: false,
+      message: 'Webhook rate limit exceeded. Maximum 60 requests per minute.'
+    });
+  }
+});
+
+/**
  * Resets rate limit keys for automated testing in non-production environments
  */
 export const resetRateLimits = (ip) => {
@@ -57,6 +80,7 @@ export const resetRateLimits = (ip) => {
       authRateLimiter.resetKey?.(t);
       executionRateLimiter.resetKey?.(t);
       executionRateLimiter.resetKey?.(`user_${t}`);
+      webhookRateLimiter.resetKey?.(t);
     } catch {}
   }
 };

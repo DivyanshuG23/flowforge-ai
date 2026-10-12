@@ -9,6 +9,9 @@ import authRoutes from './routes/authRoutes.js';
 import protectedRoutes from './routes/protectedRoutes.js';
 import workflowRoutes from './routes/workflowRoutes.js';
 import executionRoutes from './routes/executionRoutes.js';
+import { handleWebhookTrigger } from './controllers/webhookController.js';
+import { webhookRateLimiter } from './middleware/rateLimiter.js';
+import { initScheduler, stopAllSchedules } from './services/workflow/schedulerService.js';
 import { notFoundHandler, errorHandler } from './middleware/errorHandler.js';
 
 // Load environment variables
@@ -42,8 +45,10 @@ app.use(createCorsMiddleware());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Connect to MongoDB
-connectDB();
+// Connect to MongoDB and initialize background services
+connectDB().then(() => {
+  initScheduler();
+});
 
 // API Routes
 app.use('/api/health', healthRoutes);
@@ -51,6 +56,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/auth', protectedRoutes);
 app.use('/api/workflows', workflowRoutes);
 app.use('/api/executions', executionRoutes);
+// Public webhook endpoint alias
+app.post('/api/webhooks/:token', webhookRateLimiter, handleWebhookTrigger);
 
 // Catch-all 404 handler for undefined routes
 app.use(notFoundHandler);
@@ -67,6 +74,7 @@ const server = app.listen(PORT, () => {
 // Graceful shutdown handling for container and cloud environments (SIGTERM / SIGINT)
 const gracefulShutdown = (signal) => {
   console.log(`[FlowForge AI] Received ${signal}. Starting graceful shutdown...`);
+  stopAllSchedules();
   server.close(async () => {
     console.log('[FlowForge AI] HTTP server closed.');
     try {

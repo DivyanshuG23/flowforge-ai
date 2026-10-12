@@ -22,6 +22,7 @@ import {
   createWorkflow, 
   getWorkflowById, 
   updateWorkflow, 
+  duplicateWorkflow,
   executeWorkflow,
   getErrorMessage 
 } from '../services/api';
@@ -53,7 +54,7 @@ const defaultNodeData = {
     label: 'AI Anomaly Triage',
     description: 'Analyzes traces with LLM reasoning',
     provider: 'gemini',
-    model: 'gemini-1.5-flash',
+    model: 'gemini-3.5-flash',
     prompt: 'Analyze incident traces and determine recovery status.',
     systemPrompt: 'You are an autonomous Site Reliability Engineer assistant.',
     outputFormat: 'json',
@@ -94,7 +95,7 @@ const initialNodes = [
       label: 'AI Anomaly Triage',
       description: 'Analyzes traces with LLM reasoning',
       provider: 'gemini',
-      model: 'gemini-1.5-flash',
+      model: 'gemini-3.5-flash',
       prompt: 'Analyze incident traces and determine recovery status.',
       systemPrompt: 'You are an autonomous Site Reliability Engineer assistant.',
       outputFormat: 'json',
@@ -142,7 +143,24 @@ function WorkflowEditorContent() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
 
+  // Trigger configurations (Server Schedule & Webhook)
+  const [workflowSchedule, setWorkflowSchedule] = useState({
+    enabled: false,
+    cron: '0 9 * * *',
+    timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : 'UTC',
+    lastRunAt: null,
+    lastStatus: null
+  });
+  const [workflowWebhook, setWorkflowWebhook] = useState({
+    enabled: false,
+    token: '',
+    secret: '',
+    lastTriggeredAt: null,
+    totalTriggers: 0
+  });
+
   const [isSaving, setIsSaving] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState(null);
   const [isLoadingWorkflow, setIsLoadingWorkflow] = useState(!!id);
   const [loadError, setLoadError] = useState(null);
@@ -193,6 +211,20 @@ function WorkflowEditorContent() {
       setWorkflowDescription('');
       setNodes(initialNodes);
       setEdges(initialEdges);
+      setWorkflowSchedule({
+        enabled: false,
+        cron: '0 9 * * *',
+        timezone: typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : 'UTC',
+        lastRunAt: null,
+        lastStatus: null
+      });
+      setWorkflowWebhook({
+        enabled: false,
+        token: '',
+        secret: '',
+        lastTriggeredAt: null,
+        totalTriggers: 0
+      });
       setIsLoadingWorkflow(false);
       setLoadError(null);
       setIsDirty(false);
@@ -217,6 +249,24 @@ function WorkflowEditorContent() {
           setWorkflowDescription(wf.description || '');
           setNodes(Array.isArray(wf.nodes) ? wf.nodes : []);
           setEdges(Array.isArray(wf.edges) ? wf.edges : []);
+          if (wf.schedule) {
+            setWorkflowSchedule({
+              enabled: Boolean(wf.schedule.enabled),
+              cron: wf.schedule.cron || '0 9 * * *',
+              timezone: wf.schedule.timezone || (typeof Intl !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' : 'UTC'),
+              lastRunAt: wf.schedule.lastRunAt || null,
+              lastStatus: wf.schedule.lastStatus || null
+            });
+          }
+          if (wf.webhook) {
+            setWorkflowWebhook({
+              enabled: Boolean(wf.webhook.enabled),
+              token: wf.webhook.token || '',
+              secret: wf.webhook.secret || '',
+              lastTriggeredAt: wf.webhook.lastTriggeredAt || null,
+              totalTriggers: wf.webhook.totalTriggers || 0
+            });
+          }
           setIsDirty(false);
           setNodeRuntimeStatuses({});
           setActiveExecution(null);
@@ -463,6 +513,8 @@ function WorkflowEditorContent() {
       description: workflowDescription.trim(),
       nodes: persistentNodes,
       edges,
+      schedule: workflowSchedule,
+      webhook: workflowWebhook,
     };
 
     try {
@@ -507,10 +559,43 @@ function WorkflowEditorContent() {
         setSaveFeedback(null);
       }, 4000);
     }
-  }, [isSaving, workflowName, workflowDescription, nodes, edges, workflowId, navigate]);
+  }, [isSaving, workflowName, workflowDescription, nodes, edges, workflowSchedule, workflowWebhook, workflowId, navigate]);
+
+  // Duplicate handler: creates an independent copy and navigates to the duplicate's canvas
+  const handleDuplicateWorkflow = useCallback(async () => {
+    if (!workflowId || isDuplicating || isSaving || isRunning) return;
+    setIsDuplicating(true);
+    setSaveFeedback(null);
+    try {
+      const response = await duplicateWorkflow(workflowId);
+      if (response?.success && response.workflow?._id) {
+        navigate(`/workflows/${response.workflow._id}`);
+      } else {
+        throw new Error(response?.message || 'Failed to duplicate workflow.');
+      }
+    } catch (err) {
+      const errMsg = getErrorMessage(err);
+      setSaveFeedback({
+        type: 'error',
+        message: errMsg || 'Failed to duplicate workflow.'
+      });
+      setTimeout(() => setSaveFeedback(null), 4000);
+    } finally {
+      setIsDuplicating(false);
+    }
+  }, [workflowId, isDuplicating, isSaving, isRunning, navigate]);
+
+  // Helper to focus the trigger node in the inspector
+  const handleSelectTriggerNode = useCallback(() => {
+    const triggerNode = nodes.find(n => n.type === 'trigger' || n.data?.type === 'trigger');
+    if (triggerNode) {
+      setSelectedNodeId(triggerNode.id);
+    }
+  }, [nodes]);
 
   // Run Pipeline handler: saves draft if needed, triggers foundation execution engine, and displays telemetry
   const handleRunWorkflow = useCallback(async () => {
+
     if (isRunning) return;
 
     // 1. Immediately clear stale runtime statuses for the new execution
@@ -544,6 +629,8 @@ function WorkflowEditorContent() {
         description: workflowDescription.trim(),
         nodes: persistentNodes,
         edges,
+        schedule: workflowSchedule,
+        webhook: workflowWebhook,
       };
 
       try {
@@ -712,7 +799,13 @@ function WorkflowEditorContent() {
         edgeCount={edges.length}
         activeExecution={activeExecution}
         onOpenTelemetry={() => setExecutionModalOpen(true)}
+        onDuplicate={workflowId ? handleDuplicateWorkflow : undefined}
+        isDuplicating={isDuplicating}
+        workflowSchedule={workflowSchedule}
+        workflowWebhook={workflowWebhook}
+        onSelectTrigger={handleSelectTriggerNode}
       />
+
 
       {/* Main Workspace: Left Sidebar + Central Canvas + Right Inspector */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -799,6 +892,17 @@ function WorkflowEditorContent() {
           onUpdateNode={handleUpdateNode}
           onDeleteNode={handleDeleteNode}
           onClose={() => setSelectedNodeId(null)}
+          workflowSchedule={workflowSchedule}
+          workflowWebhook={workflowWebhook}
+          onUpdateSchedule={(newSched) => {
+            setWorkflowSchedule(newSched);
+            setIsDirty(true);
+          }}
+          onUpdateWebhook={(newHook) => {
+            setWorkflowWebhook(newHook);
+            setIsDirty(true);
+          }}
+          workflowId={workflowId}
         />
       </div>
 

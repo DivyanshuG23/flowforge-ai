@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   X, 
   Trash2, 
@@ -17,9 +17,22 @@ import {
   AlertCircle,
   SkipForward,
   Loader2,
-  Clock
+  Clock,
+  Check,
+  RefreshCw,
+  Key,
+  ShieldCheck
 } from 'lucide-react';
 import { sanitizeTelemetryData } from '../../utils/sanitizeTelemetry';
+
+const generateRandomToken = () => {
+  const bytes = new Uint8Array(24);
+  if (typeof window !== 'undefined' && window.crypto?.getRandomValues) {
+    window.crypto.getRandomValues(bytes);
+    return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+};
 
 const typeIcons = {
   trigger: Zap,
@@ -44,7 +57,14 @@ export default function PropertiesPanel({
   onUpdateNode,
   onDeleteNode,
   onClose,
+  workflowSchedule,
+  workflowWebhook,
+  onUpdateSchedule,
+  onUpdateWebhook,
+  workflowId,
 }) {
+  const [copiedWebhookUrl, setCopiedWebhookUrl] = useState(false);
+  const [copiedCurl, setCopiedCurl] = useState(false);
   if (!selectedNode) {
     return (
       <aside className="w-80 bg-[#0B0D0C] border-l border-[rgba(185,176,160,0.12)] p-6 flex flex-col items-center justify-center text-center select-none hidden xl:flex">
@@ -295,21 +315,340 @@ export default function PropertiesPanel({
           </span>
 
           {nodeType === 'trigger' && (
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-[11px] text-[#B9B0A0] block mb-1">Trigger Type</label>
-                <select className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F0E6] focus:outline-none focus:border-[#E5B45B]">
-                  <option>Incoming Webhook (HTTP POST)</option>
-                  <option>Cron Schedule (Every 5m)</option>
-                  <option>Manual Console Trigger</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-[11px] text-[#B9B0A0] block mb-1">Webhook Endpoint Path</label>
-                <div className="px-2.5 py-1.5 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[11px] font-mono text-[#E5B45B] truncate">
-                  /api/v1/hooks/{selectedNode.id}
+            <div className="space-y-4">
+              {/* Trigger Mode Segmented Tabs */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-semibold text-[#F5F0E6] block">Trigger Mode</label>
+                <div className="grid grid-cols-3 gap-1 bg-[#151715] p-1 rounded-xl border border-[rgba(185,176,160,0.12)]">
+                  {[
+                    { id: 'manual', label: 'Manual', icon: Activity },
+                    { id: 'schedule', label: 'Schedule', icon: Clock },
+                    { id: 'webhook', label: 'Webhook', icon: Globe },
+                  ].map((mode) => {
+                    const currentMode = selectedNode.data?.triggerMode || (
+                      workflowSchedule?.enabled ? 'schedule' : workflowWebhook?.enabled ? 'webhook' : 'manual'
+                    );
+                    const isSelected = currentMode === mode.id;
+                    const ModeIcon = mode.icon;
+                    return (
+                      <button
+                        key={mode.id}
+                        type="button"
+                        onClick={() => {
+                          onUpdateNode(selectedNode.id, {
+                            ...selectedNode.data,
+                            triggerMode: mode.id,
+                          });
+                          if (mode.id === 'schedule' && onUpdateSchedule) {
+                            onUpdateSchedule({
+                              ...(workflowSchedule || {}),
+                              enabled: true,
+                              cron: workflowSchedule?.cron || '0 9 * * *',
+                              timezone: workflowSchedule?.timezone || 'UTC',
+                            });
+                          } else if (mode.id === 'webhook' && onUpdateWebhook) {
+                            const token = workflowWebhook?.token || generateRandomToken();
+                            onUpdateWebhook({
+                              ...(workflowWebhook || {}),
+                              enabled: true,
+                              token,
+                            });
+                          }
+                        }}
+                        className={`flex items-center justify-center space-x-1 py-1.5 px-2 rounded-lg text-xs font-semibold transition-all ${
+                          isSelected
+                            ? 'bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.3)] shadow-sm'
+                            : 'text-[#B9B0A0] hover:text-[#F5F0E6]'
+                        }`}
+                      >
+                        <ModeIcon className="w-3 h-3" />
+                        <span>{mode.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
+
+              {/* Mode: Manual */}
+              {((selectedNode.data?.triggerMode || (workflowSchedule?.enabled ? 'schedule' : workflowWebhook?.enabled ? 'webhook' : 'manual')) === 'manual') && (
+                <div className="p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)] space-y-2">
+                  <div className="flex items-center space-x-2 text-xs font-semibold text-[#F5F0E6]">
+                    <Activity className="w-3.5 h-3.5 text-[#E5B45B]" />
+                    <span>Manual Execution</span>
+                  </div>
+                  <p className="text-[11px] text-[#B9B0A0] leading-relaxed">
+                    This workflow is triggered manually on-demand from the editor canvas or through the FlowForge dashboard. Downstream nodes receive an empty starting event payload.
+                  </p>
+                </div>
+              )}
+
+              {/* Mode: Schedule */}
+              {((selectedNode.data?.triggerMode || (workflowSchedule?.enabled ? 'schedule' : workflowWebhook?.enabled ? 'webhook' : 'manual')) === 'schedule') && (
+                <div className="space-y-3.5">
+                  {/* Enable Schedule Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)]">
+                    <div>
+                      <span className="text-xs font-semibold text-[#F5F0E6] block">Enable Schedule</span>
+                      <span className="text-[10px] text-[#B9B0A0] block">Server-side cron execution</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(workflowSchedule?.enabled)}
+                        onChange={(e) => {
+                          onUpdateSchedule?.({
+                            ...(workflowSchedule || {}),
+                            enabled: e.target.checked,
+                            cron: workflowSchedule?.cron || '0 9 * * *',
+                            timezone: workflowSchedule?.timezone || 'UTC',
+                          });
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-[#0B0D0C] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#B9B0A0] after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#E5B45B] peer-checked:after:bg-[#0B0D0C]"></div>
+                    </label>
+                  </div>
+
+                  {/* Schedule Presets */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-semibold text-[#F5F0E6] block">Schedule Presets</label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { label: 'Every 15 min', cron: '*/15 * * * *' },
+                        { label: 'Hourly', cron: '0 * * * *' },
+                        { label: 'Daily at 9 AM', cron: '0 9 * * *' },
+                        { label: 'Weekly on Sun', cron: '0 0 * * 0' },
+                      ].map((preset) => (
+                        <button
+                          key={preset.cron}
+                          type="button"
+                          onClick={() => {
+                            onUpdateSchedule?.({
+                              ...(workflowSchedule || {}),
+                              cron: preset.cron,
+                              enabled: true,
+                            });
+                          }}
+                          className={`px-2 py-1.5 rounded-lg text-[10px] font-semibold border transition-all text-left ${
+                            workflowSchedule?.cron === preset.cron
+                              ? 'bg-[#252419] text-[#E5B45B] border-[#E5B45B]/40'
+                              : 'bg-[#151715] text-[#B9B0A0] border-[rgba(185,176,160,0.1)] hover:text-[#F5F0E6]'
+                          }`}
+                        >
+                          <div className="font-bold">{preset.label}</div>
+                          <div className="font-mono opacity-60 text-[9px]">{preset.cron}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Cron Expression Input */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[#F5F0E6] flex items-center justify-between">
+                      <span>Cron Expression</span>
+                      <span className="text-[10px] text-[#B9B0A0] font-mono">min hour day mon dow</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={workflowSchedule?.cron ?? '0 9 * * *'}
+                      onChange={(e) => {
+                        onUpdateSchedule?.({
+                          ...(workflowSchedule || {}),
+                          cron: e.target.value,
+                        });
+                      }}
+                      placeholder="0 9 * * *"
+                      className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#E5B45B] focus:outline-none focus:border-[#E5B45B]"
+                    />
+                  </div>
+
+                  {/* Timezone Dropdown */}
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-[#F5F0E6] block">Timezone (IANA)</label>
+                    <select
+                      value={workflowSchedule?.timezone ?? 'UTC'}
+                      onChange={(e) => {
+                        onUpdateSchedule?.({
+                          ...(workflowSchedule || {}),
+                          timezone: e.target.value,
+                        });
+                      }}
+                      className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F0E6] focus:outline-none focus:border-[#E5B45B]"
+                    >
+                      <option value="UTC">UTC (Universal Coordinated Time)</option>
+                      <option value="America/New_York">America/New_York (EST/EDT)</option>
+                      <option value="America/Chicago">America/Chicago (CST/CDT)</option>
+                      <option value="America/Los_Angeles">America/Los_Angeles (PST/PDT)</option>
+                      <option value="Europe/London">Europe/London (GMT/BST)</option>
+                      <option value="Europe/Paris">Europe/Paris (CET/CEST)</option>
+                      <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
+                      <option value="Asia/Tokyo">Asia/Tokyo (JST)</option>
+                      <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
+                      <option value="Australia/Sydney">Australia/Sydney (AEST/AEDT)</option>
+                    </select>
+                  </div>
+
+                  {/* Schedule Info / State */}
+                  {workflowSchedule?.lastRunAt && (
+                    <div className="p-2.5 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[10px] space-y-1">
+                      <div className="flex justify-between text-[#B9B0A0]">
+                        <span>Last Scheduled Run:</span>
+                        <span className="font-mono text-[#F5F0E6]">{new Date(workflowSchedule.lastRunAt).toLocaleString()}</span>
+                      </div>
+                      {workflowSchedule.lastStatus && (
+                        <div className="flex justify-between text-[#B9B0A0]">
+                          <span>Last Status:</span>
+                          <span className={`font-semibold capitalize ${workflowSchedule.lastStatus === 'succeeded' ? 'text-[#059669]' : 'text-[#C83C3C]'}`}>
+                            {workflowSchedule.lastStatus}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Mode: Webhook */}
+              {((selectedNode.data?.triggerMode || (workflowSchedule?.enabled ? 'schedule' : workflowWebhook?.enabled ? 'webhook' : 'manual')) === 'webhook') && (
+                <div className="space-y-3.5">
+                  {/* Enable Webhook Toggle */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)]">
+                    <div>
+                      <span className="text-xs font-semibold text-[#F5F0E6] block">Enable Webhook</span>
+                      <span className="text-[10px] text-[#B9B0A0] block">HTTP POST trigger endpoint</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(workflowWebhook?.enabled)}
+                        onChange={(e) => {
+                          const token = workflowWebhook?.token || generateRandomToken();
+                          onUpdateWebhook?.({
+                            ...(workflowWebhook || {}),
+                            enabled: e.target.checked,
+                            token,
+                          });
+                        }}
+                        className="sr-only peer"
+                      />
+                      <div className="w-9 h-5 bg-[#0B0D0C] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#B9B0A0] after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#059669] peer-checked:after:bg-[#0B0D0C]"></div>
+                    </label>
+                  </div>
+
+                  {/* Webhook URL with Copy button */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-[#F5F0E6]">Webhook URL</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newToken = generateRandomToken();
+                          onUpdateWebhook?.({
+                            ...(workflowWebhook || {}),
+                            token: newToken,
+                          });
+                        }}
+                        className="text-[10px] text-[#E5B45B] hover:underline flex items-center space-x-1"
+                        title="Generate a new secure unguessable token"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                        <span>Regenerate Token</span>
+                      </button>
+                    </div>
+                    {workflowWebhook?.token ? (
+                      <div className="flex items-center space-x-1 bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-1.5">
+                        <span className="font-mono text-[10px] text-[#059669] truncate flex-1 px-1 select-all">
+                          {`${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}`}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}`;
+                            navigator.clipboard.writeText(url);
+                            setCopiedWebhookUrl(true);
+                            setTimeout(() => setCopiedWebhookUrl(false), 2000);
+                          }}
+                          className="p-1 rounded bg-[#252419] hover:bg-[#E5B45B] hover:text-[#0B0D0C] text-[#E5B45B] transition-colors"
+                          title="Copy Webhook URL"
+                        >
+                          {copiedWebhookUrl ? <Check className="w-3 h-3 text-[#059669]" /> : <Copy className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-[#E5B45B]/80 italic bg-[#252419]/40 p-2 rounded-lg border border-[rgba(229,180,91,0.2)]">
+                        Save workflow to generate an unguessable webhook token.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Secret Key Input */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-[#F5F0E6]">Webhook Secret (Optional)</label>
+                      {workflowWebhook?.hasSecret && (
+                        <span className="flex items-center space-x-1 text-[10px] text-[#059669] font-semibold">
+                          <ShieldCheck className="w-3 h-3 text-[#059669]" />
+                          <span>Secret Active</span>
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="password"
+                      value={workflowWebhook?.secret ?? ''}
+                      onChange={(e) => {
+                        onUpdateWebhook?.({
+                          ...(workflowWebhook || {}),
+                          secret: e.target.value,
+                        });
+                      }}
+                      placeholder={
+                        workflowWebhook?.hasSecret
+                          ? '•••••••• (Secret active — leave blank to keep)'
+                          : 'Enter optional secret...'
+                      }
+                      className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] focus:outline-none focus:border-[#E5B45B]"
+                    />
+                    <p className="text-[10px] text-[#B9B0A0]/70 leading-tight">
+                      When set, calls must supply <code className="text-[#E5B45B]">X-Webhook-Secret</code> or <code className="text-[#E5B45B]">Authorization: Bearer &lt;secret&gt;</code>.
+                    </p>
+                  </div>
+
+                  {/* Test cURL Snippet */}
+                  {workflowWebhook?.token && (
+                    <div className="space-y-1 pt-1">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-[#F5F0E6]">Test cURL Command</label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const url = `${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}`;
+                            const secretHeader = workflowWebhook.secret ? `-H "X-Webhook-Secret: ${workflowWebhook.secret}" ` : '';
+                            const curl = `curl -X POST "${url}" -H "Content-Type: application/json" ${secretHeader}-d '{"event":"test","timestamp":"${new Date().toISOString()}"}'`;
+                            navigator.clipboard.writeText(curl);
+                            setCopiedCurl(true);
+                            setTimeout(() => setCopiedCurl(false), 2000);
+                          }}
+                          className="text-[10px] text-[#E5B45B] hover:underline flex items-center space-x-1"
+                        >
+                          {copiedCurl ? <Check className="w-2.5 h-2.5 text-[#059669]" /> : <Copy className="w-2.5 h-2.5" />}
+                          <span>{copiedCurl ? 'Copied' : 'Copy cURL'}</span>
+                        </button>
+                      </div>
+                      <pre className="p-2 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[10px] font-mono text-[#B9B0A0] overflow-x-auto whitespace-pre-wrap select-all">
+                        {`curl -X POST "${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}" \\\n  -H "Content-Type: application/json" ${workflowWebhook.secret ? `\\\n  -H "X-Webhook-Secret: ${workflowWebhook.secret}" ` : ''}\\\n  -d '{"event":"test","timestamp":"${new Date().toISOString()}"}'`}
+                      </pre>
+                    </div>
+                  )}
+
+                  {/* Webhook Telemetry */}
+                  {workflowWebhook?.totalTriggers !== undefined && (
+                    <div className="p-2 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[10px] flex justify-between text-[#B9B0A0]">
+                      <span>Total Webhook Invocations:</span>
+                      <span className="font-mono text-[#059669] font-bold">{workflowWebhook.totalTriggers}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -455,7 +794,7 @@ export default function PropertiesPanel({
                   value={selectedNode.data?.provider || 'gemini'}
                   onChange={(e) => {
                     const newProvider = e.target.value;
-                    const newModel = newProvider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini';
+                    const newModel = newProvider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini';
                     onUpdateNode(selectedNode.id, {
                       ...selectedNode.data,
                       provider: newProvider,
@@ -483,7 +822,7 @@ export default function PropertiesPanel({
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
                         _isCustomModel: !isCustom,
-                        model: !isCustom ? '' : (selectedNode.data?.provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini')
+                        model: !isCustom ? '' : (selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini')
                       });
                     }}
                     className="text-[10px] text-[#E5B45B] hover:underline"
@@ -501,12 +840,12 @@ export default function PropertiesPanel({
                         model: e.target.value
                       })
                     }
-                    placeholder={selectedNode.data?.provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini'}
+                    placeholder={selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini'}
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B]"
                   />
                 ) : (
                   <select
-                    value={selectedNode.data?.model || (selectedNode.data?.provider === 'gemini' ? 'gemini-1.5-flash' : 'gpt-4o-mini')}
+                    value={selectedNode.data?.model || (selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini')}
                     onChange={(e) =>
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
@@ -517,9 +856,9 @@ export default function PropertiesPanel({
                   >
                     {selectedNode.data?.provider === 'gemini' ? (
                       <>
-                        <option value="gemini-1.5-flash">gemini-1.5-flash (Fast & Lightweight)</option>
-                        <option value="gemini-1.5-pro">gemini-1.5-pro (Deep Reasoning)</option>
-                        <option value="gemini-2.0-flash">gemini-2.0-flash (High Speed)</option>
+                        <option value="gemini-3.5-flash">gemini-3.5-flash (Fast & Verified)</option>
+                        <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning / High Capability)</option>
+                        <option value="gemini-flash-latest">gemini-flash-latest (Latest Release)</option>
                       </>
                     ) : (
                       <>

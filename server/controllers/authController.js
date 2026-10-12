@@ -145,3 +145,125 @@ export const login = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Get authenticated user profile
+ * @route   GET /api/auth/me
+ * @access  Private (JWT required)
+ */
+export const getProfile = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or account removed.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt
+      },
+      userId: user._id,
+      role: user.role
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Update authenticated user profile (name and/or password)
+ * @route   PUT /api/auth/profile
+ * @access  Private (JWT required)
+ */
+export const updateProfile = async (req, res, next) => {
+  try {
+    const { name, currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found or access denied.'
+      });
+    }
+
+    // Name update
+    if (name !== undefined) {
+      if (typeof name !== 'string' || !name.trim()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name cannot be empty.'
+        });
+      }
+      if (name.trim().length < 2 || name.trim().length > 50) {
+        return res.status(400).json({
+          success: false,
+          message: 'Name must be between 2 and 50 characters.'
+        });
+      }
+      user.name = name.trim();
+    }
+
+    // Password change
+    if (newPassword || currentPassword) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is required to set a new password.'
+        });
+      }
+      if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be at least 6 characters long.'
+        });
+      }
+
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({
+          success: false,
+          message: 'Current password is incorrect.'
+        });
+      }
+
+      if (currentPassword === newPassword) {
+        return res.status(400).json({
+          success: false,
+          message: 'New password must be different from current password.'
+        });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    // Role and privileged fields are never modified from client payload
+    const updatedUser = await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully.',
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        email: updatedUser.email,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

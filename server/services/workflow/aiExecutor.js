@@ -23,7 +23,7 @@ export const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds
 export const MIN_TIMEOUT_MS = 1000; // 1 second
 export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 
-export const DEFAULT_GEMINI_MODEL = 'gemini-1.5-flash';
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.5-flash';
 export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
 export const DEFAULT_TEMPERATURE = 0.2;
 export const DEFAULT_MAX_TOKENS = 1024;
@@ -317,6 +317,23 @@ export const formatProviderError = (status, responseText, providerName) => {
   }
   if (status === 429) {
     return `AI provider rate limit reached (HTTP 429). Please retry after cooldown.`;
+  }
+  if (status === 404) {
+    let extractedMsg = '';
+    if (responseText) {
+      try {
+        const parsed = JSON.parse(responseText);
+        extractedMsg =
+          parsed.error?.message ||
+          parsed.message ||
+          parsed.error ||
+          '';
+      } catch {
+        extractedMsg = responseText.slice(0, 200);
+      }
+    }
+    const safeMsg = sanitizeSecretsInString(extractedMsg);
+    return `AI model not found or unsupported by provider (HTTP 404). ${safeMsg || 'Verify that the configured model name is valid and supported by your API key tier.'}`;
   }
   if (status >= 500) {
     return `AI provider upstream service error (HTTP ${status}). The service may be temporarily unavailable.`;

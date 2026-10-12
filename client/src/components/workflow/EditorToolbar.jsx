@@ -11,7 +11,10 @@ import {
   Layers,
   Loader2,
   CloudCheck,
-  AlertTriangle
+  AlertTriangle,
+  Copy,
+  Clock,
+  Globe
 } from 'lucide-react';
 
 export default function EditorToolbar({ 
@@ -27,8 +30,14 @@ export default function EditorToolbar({
   nodeCount, 
   edgeCount,
   activeExecution,
-  onOpenTelemetry
+  onOpenTelemetry,
+  onDuplicate,
+  isDuplicating,
+  workflowSchedule,
+  workflowWebhook,
+  onSelectTrigger
 }) {
+
   const navigate = useNavigate();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(workflowName);
@@ -134,14 +143,47 @@ export default function EditorToolbar({
         </div>
       </div>
 
-      {/* Middle: Canvas Stats */}
-      <div className="hidden lg:flex items-center space-x-4 text-xs text-[#B9B0A0]">
+      {/* Middle: Canvas Stats & Trigger Indicator */}
+      <div className="hidden lg:flex items-center space-x-3 text-xs text-[#B9B0A0]">
         <div className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#151715] border border-[rgba(185,176,160,0.08)]">
           <Layers className="w-3.5 h-3.5 text-[#E5B45B]" />
           <span>{nodeCount} {nodeCount === 1 ? 'Node' : 'Nodes'}</span>
           <span className="text-[rgba(185,176,160,0.3)]">|</span>
           <span>{edgeCount} {edgeCount === 1 ? 'Connection' : 'Connections'}</span>
         </div>
+
+        {/* Trigger Status Badge */}
+        {workflowSchedule?.enabled ? (
+          <button
+            type="button"
+            onClick={onSelectTrigger}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#E5B45B]/10 hover:bg-[#E5B45B]/20 text-[#E5B45B] border border-[#E5B45B]/30 transition-colors text-xs font-medium cursor-pointer"
+            title={`Schedule active: ${workflowSchedule.cron || 'Cron'} (${workflowSchedule.timezone || 'UTC'}). Click to configure.`}
+          >
+            <Clock className="w-3.5 h-3.5 text-[#E5B45B]" />
+            <span className="font-mono text-[11px]">Schedule: {workflowSchedule.cron}</span>
+          </button>
+        ) : workflowWebhook?.enabled ? (
+          <button
+            type="button"
+            onClick={onSelectTrigger}
+            className="flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#059669]/10 hover:bg-[#059669]/20 text-[#059669] border border-[#059669]/30 transition-colors text-xs font-medium cursor-pointer"
+            title="Incoming Webhook trigger active. Click to view endpoint and token."
+          >
+            <Globe className="w-3.5 h-3.5 text-[#059669]" />
+            <span className="text-[11px]">Webhook Active</span>
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onSelectTrigger}
+            className="hidden xl:flex items-center space-x-1.5 px-2.5 py-1 rounded-lg bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.08)] transition-colors text-xs font-medium cursor-pointer"
+            title="Configure Schedule or Webhook triggers for automated runs"
+          >
+            <Clock className="w-3.5 h-3.5 opacity-60" />
+            <span className="text-[11px]">Trigger: Manual</span>
+          </button>
+        )}
       </div>
 
       {/* Right: Actions */}
@@ -185,7 +227,31 @@ export default function EditorToolbar({
           </button>
         )}
 
+        {/* Duplicate Workflow Button */}
+        {workflowId && onDuplicate && (
+          <button
+            type="button"
+            onClick={onDuplicate}
+            disabled={isDuplicating || isSaving || isRunning}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border ${
+              isDuplicating
+                ? 'bg-[#151715] text-[#B9B0A0] border-[rgba(185,176,160,0.1)] cursor-wait opacity-80'
+                : 'bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border-[rgba(185,176,160,0.16)] hover:border-[#E5B45B]/40'
+            }`}
+            title="Duplicate this workflow as a new copy"
+            aria-label="Duplicate workflow"
+          >
+            {isDuplicating ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E5B45B]" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">{isDuplicating ? 'Duplicating...' : 'Duplicate'}</span>
+          </button>
+        )}
+
         {/* Save to Cloud Button */}
+
         <button
           onClick={onSave}
           disabled={isSaving}

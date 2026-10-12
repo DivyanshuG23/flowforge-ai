@@ -78,21 +78,27 @@ const executeAiNode = async (node, incomingInput) => {
  * @param {Object} incomingInput - Aggregated data from parent nodes
  * @returns {Promise<{ success: boolean, output?: any, error?: string, requestTelemetry?: any }>}
  */
-const executeNodeSafely = async (node, incomingInput) => {
+const executeNodeSafely = async (node, incomingInput, options = {}) => {
   const nodeType = node.data?.type || node.type || 'action';
 
   switch (nodeType) {
     case 'trigger': {
-      // Deterministic trigger output
+      // Deterministic trigger output supporting manual, scheduled, or webhook payloads
+      const basePayload = options.triggerPayload || node.data?.payload || {
+        event: 'pipeline_initiated',
+        status: 'active'
+      };
+
       return {
         success: true,
         output: {
-          triggerType: node.data?.triggerType || 'manual',
+          triggerType: options.triggerSource || node.data?.triggerType || 'manual',
           timestamp: new Date().toISOString(),
-          payload: node.data?.payload || {
-            event: 'pipeline_initiated',
-            status: 'active'
-          }
+          payload: basePayload,
+          ...(typeof basePayload === 'object' && basePayload !== null && !Array.isArray(basePayload)
+            ? basePayload
+            : {}),
+          ...(options.metadata ? { metadata: options.metadata } : {})
         }
       };
     }
@@ -147,7 +153,7 @@ const executeNodeSafely = async (node, incomingInput) => {
  * @param {Object} workflow - Saved workflow document
  * @returns {Promise<{ status: string, error?: string, nodeExecutions: Array, durationMs: number }>}
  */
-export const executeWorkflowPipeline = async (workflow) => {
+export const executeWorkflowPipeline = async (workflow, options = {}) => {
   const startTime = Date.now();
 
   const plainWorkflow =
@@ -273,7 +279,7 @@ export const executeWorkflowPipeline = async (workflow) => {
     }
 
     // Execute node safely
-    const nodeResult = await executeNodeSafely(node, aggregatedInput);
+    const nodeResult = await executeNodeSafely(node, aggregatedInput, options);
     const nodeEndTime = new Date();
     const nodeDurationMs = nodeEndTime.getTime() - nodeStartTime.getTime();
 

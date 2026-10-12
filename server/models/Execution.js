@@ -98,6 +98,17 @@ const executionSchema = new mongoose.Schema(
     error: {
       type: String,
       default: null
+    },
+    triggerSource: {
+      type: String,
+      enum: ['manual', 'scheduled', 'webhook'],
+      default: 'manual',
+      required: true,
+      index: true
+    },
+    triggerData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null
     }
   },
   {

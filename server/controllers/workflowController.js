@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
 import Workflow from '../models/Workflow.js';
+import {
+  registerSchedule,
+  unregisterSchedule,
+  isValidCron,
+  isValidTimezone,
+  getScheduleStatus
+} from '../services/workflow/schedulerService.js';
+import { generateWebhookToken } from './webhookController.js';
 
 /**
  * Validates array of React Flow nodes
@@ -62,7 +70,7 @@ const validateEdges = (edges) => {
  */
 export const createWorkflow = async (req, res) => {
   try {
-    const { name, description, nodes, edges } = req.body;
+    const { name, description, nodes, edges, schedule, webhook } = req.body;
 
     // Validate workflow name
     if (!name || typeof name !== 'string' || !name.trim()) {
@@ -108,14 +116,61 @@ export const createWorkflow = async (req, res) => {
       }
     }
 
+    // Validate schedule if provided
+    let validatedSchedule = undefined;
+    if (schedule && typeof schedule === 'object') {
+      const isEnabled = Boolean(schedule.enabled);
+      const cron = typeof schedule.cron === 'string' ? schedule.cron.trim() : '';
+      const timezone = typeof schedule.timezone === 'string' ? schedule.timezone.trim() : 'UTC';
+
+      if (isEnabled) {
+        if (!isValidCron(cron)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid cron expression format (expected 5 fields, e.g. "0 9 * * *").'
+          });
+        }
+        if (!isValidTimezone(timezone)) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid or unsupported timezone "${timezone}".`
+          });
+        }
+      }
+      validatedSchedule = {
+        enabled: isEnabled,
+        cron,
+        timezone,
+        lastRunAt: null,
+        nextRunAt: null,
+        lastStatus: null
+      };
+    }
+
+    // Set up webhook configuration with unguessable token
+    const validatedWebhook = {
+      enabled: Boolean(webhook?.enabled),
+      token: generateWebhookToken(),
+      secret: typeof webhook?.secret === 'string' ? webhook.secret.trim() : '',
+      lastTriggeredAt: null,
+      totalTriggers: 0
+    };
+
     // Owner ID is strictly bound from verified JWT claims
     const workflow = await Workflow.create({
       name: name.trim(),
       description: description ? description.trim() : '',
       user: req.user.id,
       nodes: Array.isArray(nodes) ? nodes : [],
-      edges: Array.isArray(edges) ? edges : []
+      edges: Array.isArray(edges) ? edges : [],
+      ...(validatedSchedule ? { schedule: validatedSchedule } : {}),
+      webhook: validatedWebhook
     });
+
+    // Register active schedule in memory
+    if (workflow.schedule?.enabled) {
+      registerSchedule(workflow);
+    }
 
     return res.status(201).json({
       success: true,
@@ -126,6 +181,12 @@ export const createWorkflow = async (req, res) => {
         description: workflow.description,
         nodes: workflow.nodes,
         edges: workflow.edges,
+        schedule: workflow.schedule,
+        webhook: {
+          enabled: workflow.webhook.enabled,
+          token: workflow.webhook.token,
+          hasSecret: Boolean(workflow.webhook.secret)
+        },
         createdAt: workflow.createdAt,
         updatedAt: workflow.updatedAt
       }
@@ -153,10 +214,10 @@ export const createWorkflow = async (req, res) => {
  */
 export const getWorkflows = async (req, res) => {
   try {
-    // Only return workflows owned by this user
+    // Only return workflows owned by this user, excluding secret
     const workflows = await Workflow.find({ user: req.user.id })
       .sort({ updatedAt: -1 })
-      .select('-__v');
+      .select('-__v -webhook.secret');
 
     return res.status(200).json({
       success: true,
@@ -200,9 +261,15 @@ export const getWorkflowById = async (req, res) => {
       });
     }
 
+    const workflowObj = workflow.toObject();
+    if (workflowObj.webhook) {
+      workflowObj.webhook.hasSecret = Boolean(workflowObj.webhook.secret && workflowObj.webhook.secret.trim());
+      delete workflowObj.webhook.secret;
+    }
+
     return res.status(200).json({
       success: true,
-      workflow
+      workflow: workflowObj
     });
   } catch (error) {
     return res.status(500).json({
@@ -220,7 +287,7 @@ export const getWorkflowById = async (req, res) => {
 export const updateWorkflow = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, nodes, edges } = req.body;
+    const { name, description, nodes, edges, schedule, webhook } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -291,12 +358,90 @@ export const updateWorkflow = async (req, res) => {
       workflow.edges = edges;
     }
 
+    // Update schedule configuration if provided
+    if (schedule !== undefined) {
+      if (typeof schedule !== 'object' || schedule === null) {
+        return res.status(400).json({
+          success: false,
+          message: 'Schedule configuration must be an object.'
+        });
+      }
+      const isEnabled = Boolean(schedule.enabled);
+      const cron = schedule.cron !== undefined ? String(schedule.cron).trim() : workflow.schedule?.cron || '';
+      const timezone = schedule.timezone !== undefined ? String(schedule.timezone).trim() : workflow.schedule?.timezone || 'UTC';
+
+      if (isEnabled) {
+        if (!isValidCron(cron)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Invalid cron expression format (expected 5 fields, e.g. "0 9 * * *").'
+          });
+        }
+        if (!isValidTimezone(timezone)) {
+          return res.status(400).json({
+            success: false,
+            message: `Invalid or unsupported timezone "${timezone}".`
+          });
+        }
+      }
+
+      workflow.schedule = {
+        ...(workflow.schedule?.toObject ? workflow.schedule.toObject() : workflow.schedule || {}),
+        enabled: isEnabled,
+        cron,
+        timezone
+      };
+    }
+
+    // Update webhook configuration if provided
+    if (webhook !== undefined) {
+      if (typeof webhook !== 'object' || webhook === null) {
+        return res.status(400).json({
+          success: false,
+          message: 'Webhook configuration must be an object.'
+        });
+      }
+      const isEnabled = Boolean(webhook.enabled);
+      let token = workflow.webhook?.token;
+      if (!token || webhook.regenerateToken) {
+        token = generateWebhookToken();
+      }
+      let secret = workflow.webhook?.secret || '';
+      if (webhook.secret !== undefined && webhook.secret !== null && String(webhook.secret).trim() !== '') {
+        secret = String(webhook.secret).trim();
+      } else if (webhook.clearSecret) {
+        secret = '';
+      }
+
+      workflow.webhook = {
+        ...(workflow.webhook?.toObject ? workflow.webhook.toObject() : workflow.webhook || {}),
+        enabled: isEnabled,
+        token,
+        secret
+      };
+    }
+
     const updatedWorkflow = await workflow.save();
+
+    // Sync in-memory cron scheduler
+    if (updatedWorkflow.schedule?.enabled) {
+      registerSchedule(updatedWorkflow);
+    } else {
+      unregisterSchedule(updatedWorkflow._id);
+    }
+
+    const workflowResponse = updatedWorkflow.toObject();
+    if (workflowResponse.webhook) {
+      workflowResponse.webhook.hasSecret = Boolean(
+        workflowResponse.webhook.secret && workflowResponse.webhook.secret.trim()
+      );
+      delete workflowResponse.webhook.secret;
+    }
 
     return res.status(200).json({
       success: true,
       message: 'Workflow updated successfully.',
-      workflow: updatedWorkflow
+      workflow: workflowResponse
     });
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -343,6 +488,9 @@ export const deleteWorkflow = async (req, res) => {
       });
     }
 
+    // Unregister any active cron jobs immediately
+    unregisterSchedule(workflow._id);
+
     return res.status(200).json({
       success: true,
       message: 'Workflow deleted successfully.'
@@ -354,3 +502,347 @@ export const deleteWorkflow = async (req, res) => {
     });
   }
 };
+
+/**
+ * @route   POST /api/workflows/:id/duplicate
+ * @desc    Duplicate an existing workflow owned by the authenticated user
+ * @access  Private (JWT required)
+ */
+export const duplicateWorkflow = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid workflow ID format.'
+      });
+    }
+
+    // Strict ownership enforcement
+    const sourceWorkflow = await Workflow.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!sourceWorkflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found or access denied.'
+      });
+    }
+
+    // Sanitize nodes: strip runtime telemetry and transient execution state
+    const sourceNodes = Array.isArray(sourceWorkflow.nodes) ? sourceWorkflow.nodes : [];
+    const sanitizedNodes = sourceNodes.map((node) => {
+      const raw = node.toObject ? node.toObject() : { ...node };
+      const { id: nodeId, type, position, measured, selected, data = {} } = raw;
+
+      // Filter out any runtime telemetry or execution engine attributes
+      const {
+        runtimeStatus,
+        runtimeDurationMs,
+        runtimeError,
+        runtimeOutput,
+        runtimeInput,
+        lastExecutionId,
+        executionLogs,
+        ...cleanData
+      } = data;
+
+      return {
+        id: nodeId,
+        type: type || 'custom',
+        position: position ? { x: position.x || 0, y: position.y || 0 } : { x: 0, y: 0 },
+        data: cleanData,
+        measured: measured || undefined,
+        selected: false
+      };
+    });
+
+    // Sanitize edges: ensure clean connection clones
+    const sourceEdges = Array.isArray(sourceWorkflow.edges) ? sourceWorkflow.edges : [];
+    const sanitizedEdges = sourceEdges.map((edge) => {
+      const raw = edge.toObject ? edge.toObject() : { ...edge };
+      const {
+        id: edgeId,
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+        animated,
+        style,
+        data
+      } = raw;
+
+      return {
+        id: edgeId,
+        source,
+        target,
+        sourceHandle: sourceHandle || undefined,
+        targetHandle: targetHandle || undefined,
+        animated: animated !== undefined ? animated : true,
+        style: style || undefined,
+        data: data || undefined
+      };
+    });
+
+    // Form duplicate name: append " (Copy)" respecting 100 char limit
+    let duplicateName = `${sourceWorkflow.name} (Copy)`;
+    if (duplicateName.length > 100) {
+      duplicateName = duplicateName.slice(0, 93).trim() + ' (Copy)';
+    }
+
+    const duplicatedWorkflow = await Workflow.create({
+      name: duplicateName,
+      description: sourceWorkflow.description || '',
+      user: req.user.id,
+      nodes: sanitizedNodes,
+      edges: sanitizedEdges
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Workflow duplicated successfully.',
+      workflow: {
+        _id: duplicatedWorkflow._id,
+        name: duplicatedWorkflow.name,
+        description: duplicatedWorkflow.description,
+        nodes: duplicatedWorkflow.nodes,
+        edges: duplicatedWorkflow.edges,
+        createdAt: duplicatedWorkflow.createdAt,
+        updatedAt: duplicatedWorkflow.updatedAt
+      }
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((val) => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to duplicate workflow due to an internal server error.'
+    });
+  }
+};
+
+/**
+ * @route   GET /api/workflows/:id/triggers
+ * @desc    Get trigger configurations (schedule & webhook status) for a workflow
+ * @access  Private (JWT required)
+ */
+export const getWorkflowTriggers = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid workflow ID format.'
+      });
+    }
+
+    const workflow = await Workflow.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found or access denied.'
+      });
+    }
+
+    const scheduleStatus = getScheduleStatus(workflow._id);
+
+    return res.status(200).json({
+      success: true,
+      workflowId: workflow._id,
+      schedule: {
+        enabled: Boolean(workflow.schedule?.enabled),
+        cron: workflow.schedule?.cron || '',
+        timezone: workflow.schedule?.timezone || 'UTC',
+        lastRunAt: workflow.schedule?.lastRunAt || null,
+        lastStatus: workflow.schedule?.lastStatus || null,
+        isRegisteredInMemory: scheduleStatus.isRegistered,
+        inFlight: scheduleStatus.inFlight
+      },
+      webhook: {
+        enabled: Boolean(workflow.webhook?.enabled),
+        token: workflow.webhook?.token || null,
+        hasSecret: Boolean(workflow.webhook?.secret && workflow.webhook.secret.trim()),
+        lastTriggeredAt: workflow.webhook?.lastTriggeredAt || null,
+        totalTriggers: workflow.webhook?.totalTriggers || 0,
+        endpointPath: workflow.webhook?.token ? `/api/workflows/webhook/${workflow.webhook.token}` : null
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve workflow triggers.'
+    });
+  }
+};
+
+/**
+ * @route   PUT /api/workflows/:id/schedule
+ * @desc    Configure and toggle workflow server-side cron schedule
+ * @access  Private (JWT required)
+ */
+export const updateWorkflowSchedule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled, cron, timezone } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid workflow ID format.'
+      });
+    }
+
+    const workflow = await Workflow.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found or access denied.'
+      });
+    }
+
+    const isEnabled = enabled !== undefined ? Boolean(enabled) : Boolean(workflow.schedule?.enabled);
+    const cronExp = cron !== undefined ? String(cron).trim() : workflow.schedule?.cron || '';
+    const tz = timezone !== undefined ? String(timezone).trim() : workflow.schedule?.timezone || 'UTC';
+
+    if (isEnabled) {
+      if (!isValidCron(cronExp)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid cron expression format (expected 5 fields, e.g. "0 9 * * *").'
+        });
+      }
+      if (!isValidTimezone(tz)) {
+        return res.status(400).json({
+          success: false,
+          message: `Invalid or unsupported timezone "${tz}".`
+        });
+      }
+    }
+
+    workflow.schedule = {
+      ...(workflow.schedule?.toObject ? workflow.schedule.toObject() : workflow.schedule || {}),
+      enabled: isEnabled,
+      cron: cronExp,
+      timezone: tz
+    };
+
+    await workflow.save();
+
+    if (isEnabled) {
+      registerSchedule(workflow);
+    } else {
+      unregisterSchedule(workflow._id);
+    }
+
+    const scheduleStatus = getScheduleStatus(workflow._id);
+
+    return res.status(200).json({
+      success: true,
+      message: isEnabled ? 'Workflow schedule registered and active.' : 'Workflow schedule deactivated.',
+      schedule: {
+        enabled: isEnabled,
+        cron: cronExp,
+        timezone: tz,
+        isRegisteredInMemory: scheduleStatus.isRegistered,
+        lastRunAt: workflow.schedule?.lastRunAt || null,
+        lastStatus: workflow.schedule?.lastStatus || null
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update schedule.'
+    });
+  }
+};
+
+/**
+ * @route   PUT /api/workflows/:id/webhook
+ * @desc    Configure and toggle workflow webhook trigger
+ * @access  Private (JWT required)
+ */
+export const updateWorkflowWebhook = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { enabled, secret, regenerateToken } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid workflow ID format.'
+      });
+    }
+
+    const workflow = await Workflow.findOne({
+      _id: id,
+      user: req.user.id
+    });
+
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'Workflow not found or access denied.'
+      });
+    }
+
+    const isEnabled = enabled !== undefined ? Boolean(enabled) : Boolean(workflow.webhook?.enabled);
+    let token = workflow.webhook?.token;
+    if (!token || regenerateToken) {
+      token = generateWebhookToken();
+    }
+    let webhookSecret = workflow.webhook?.secret || '';
+    if (secret !== undefined && secret !== null && String(secret).trim() !== '') {
+      webhookSecret = String(secret).trim();
+    } else if (req.body?.clearSecret) {
+      webhookSecret = '';
+    }
+
+    workflow.webhook = {
+      ...(workflow.webhook?.toObject ? workflow.webhook.toObject() : workflow.webhook || {}),
+      enabled: isEnabled,
+      token,
+      secret: webhookSecret,
+      lastTriggeredAt: workflow.webhook?.lastTriggeredAt || null,
+      totalTriggers: workflow.webhook?.totalTriggers || 0
+    };
+
+    await workflow.save();
+
+    return res.status(200).json({
+      success: true,
+      message: isEnabled ? 'Webhook trigger enabled.' : 'Webhook trigger disabled.',
+      webhook: {
+        enabled: isEnabled,
+        token,
+        hasSecret: Boolean(webhookSecret),
+        endpointPath: `/api/workflows/webhook/${token}`,
+        lastTriggeredAt: workflow.webhook?.lastTriggeredAt || null,
+        totalTriggers: workflow.webhook?.totalTriggers || 0
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to update webhook configuration.'
+    });
+  }
+};
+

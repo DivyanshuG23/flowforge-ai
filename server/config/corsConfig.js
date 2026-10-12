@@ -50,7 +50,14 @@ export const createCorsMiddleware = () => {
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'X-Webhook-Secret',
+      'X-Event-ID'
+    ],
     exposedHeaders: [
       'RateLimit',
       'RateLimit-Policy',

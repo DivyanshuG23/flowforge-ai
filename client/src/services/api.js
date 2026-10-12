@@ -48,6 +48,47 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Centralized handling for expired or invalid authentication sessions
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const status = error?.response?.status;
+    const requestUrl = error?.config?.url || '';
+
+    // Ignore 401s on login/register endpoints to allow standard credential validation messages
+    const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+    // Only handle HTTP 401 Unauthorized on authenticated routes — never treat 403 Forbidden as expired session
+    if (status === 401 && !isAuthEndpoint) {
+      try {
+        localStorage.removeItem('flowforge_token');
+        localStorage.removeItem('flowforge_user');
+      } catch {
+        // Ignore storage access restrictions
+      }
+
+      // Safe redirect to /login avoiding redirect loops
+      if (typeof window !== 'undefined' && window.location) {
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login' && currentPath !== '/register') {
+          try {
+            sessionStorage.setItem(
+              'flowforge_redirect_after_login',
+              currentPath + window.location.search
+            );
+          } catch {
+            // Ignore sessionStorage restrictions
+          }
+          window.location.href = '/login?session_expired=true';
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
+
 /**
  * Health check API
  */
@@ -83,6 +124,16 @@ export const getCurrentUser = async () => {
 };
 
 /**
+ * Update authenticated user profile
+ * @param {{ name?: string, currentPassword?: string, newPassword?: string }} profileData
+ */
+export const updateProfile = async (profileData) => {
+  const response = await api.put('/auth/profile', profileData);
+  return response.data;
+};
+
+
+/**
  * Workflow API Methods
  */
 export const createWorkflow = async (workflowData) => {
@@ -110,6 +161,26 @@ export const deleteWorkflow = async (id) => {
   return response.data;
 };
 
+export const duplicateWorkflow = async (id) => {
+  const response = await api.post(`/workflows/${id}/duplicate`);
+  return response.data;
+};
+
+export const getWorkflowTriggers = async (workflowId) => {
+  const response = await api.get(`/workflows/${workflowId}/triggers`);
+  return response.data;
+};
+
+export const updateWorkflowSchedule = async (workflowId, scheduleData) => {
+  const response = await api.put(`/workflows/${workflowId}/schedule`, scheduleData);
+  return response.data;
+};
+
+export const updateWorkflowWebhook = async (workflowId, webhookData) => {
+  const response = await api.put(`/workflows/${workflowId}/webhook`, webhookData);
+  return response.data;
+};
+
 /**
  * Execution API Methods
  */
@@ -120,6 +191,16 @@ export const executeWorkflow = async (workflowId) => {
 
 export const getWorkflowExecutions = async (workflowId) => {
   const response = await api.get(`/workflows/${workflowId}/executions`);
+  return response.data;
+};
+
+export const getUserExecutions = async (params = {}) => {
+  const response = await api.get('/executions', { params });
+  return response.data;
+};
+
+export const getUserExecutionStats = async () => {
+  const response = await api.get('/executions/stats');
   return response.data;
 };
 
@@ -138,7 +219,14 @@ export const getErrorMessage = (error) => {
     return error.response.data.message;
   }
   if (error?.response?.status === 401) {
-    return 'Invalid credentials. Please verify your email and password.';
+    const requestUrl = error?.config?.url || '';
+    if (requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register')) {
+      return 'Invalid credentials. Please verify your email and password.';
+    }
+    return 'Your session has expired. Please sign in again.';
+  }
+  if (error?.response?.status === 403) {
+    return 'Access denied. You do not have permission to perform this action.';
   }
   if (error?.response?.status === 409) {
     return 'An account with this email already exists.';
@@ -150,3 +238,4 @@ export const getErrorMessage = (error) => {
 };
 
 export default api;
+
