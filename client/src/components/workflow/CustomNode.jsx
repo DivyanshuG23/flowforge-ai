@@ -96,7 +96,7 @@ function CustomNode({ data, selected, isConnectable }) {
       : nodeType === 'condition' && data.field
       ? `If ${data.field} ${data.operator || 'equals'}${data.value !== undefined && data.value !== '' ? ` "${data.value}"` : ''}`
       : nodeType === 'ai' && (data.model || data.prompt)
-      ? `${data.model || 'gemini-3.5-flash'} • ${data.outputFormat === 'json' ? 'JSON' : 'Text'}${data.prompt ? ` • ${data.prompt.slice(0, 20)}${data.prompt.length > 20 ? '...' : ''}` : ''}`
+      ? `${data.model || 'gemini-2.5-flash'} • ${data.outputFormat === 'json' ? 'JSON' : 'Text'}${data.prompt ? ` • ${data.prompt.slice(0, 20)}${data.prompt.length > 20 ? '...' : ''}` : ''}`
       : data.description || config.defaultDesc;
 
   const runtimeStatus = data.runtimeStatus;

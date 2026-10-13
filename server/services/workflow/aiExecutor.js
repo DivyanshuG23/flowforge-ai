@@ -23,13 +23,73 @@ export const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds
 export const MIN_TIMEOUT_MS = 1000; // 1 second
 export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 
-export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.5-flash';
-export const DEFAULT_OPENAI_MODEL = 'gpt-4o-mini';
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash';
+export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile';
+export const DEFAULT_OPENAI_MODEL = process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
+export const DEFAULT_MISTRAL_MODEL = process.env.MISTRAL_DEFAULT_MODEL || 'mistral-small-latest';
 export const DEFAULT_TEMPERATURE = 0.2;
 export const DEFAULT_MAX_TOKENS = 1024;
 
-export const ALLOWED_PROVIDERS = new Set(['gemini', 'openai', 'openai-compatible']);
+export const RETRYABLE_HTTP_STATUSES = new Set([429, 500, 502, 503, 504]);
+export const MAX_AI_RETRIES = 2; // Up to 2 retries (total 3 attempts)
+export const INITIAL_RETRY_DELAY_MS = 1000; // 1 second base backoff
+export const BACKOFF_MULTIPLIER = 2; // Exponential factor
+export const MAX_RETRY_DELAY_MS = 5000; // Cap backoff delay at 5 seconds
+export const MAX_JITTER_RATIO = 0.3; // 0% to 30% randomized jitter
+
+export const ALLOWED_PROVIDERS = new Set(['gemini', 'openai', 'openai-compatible', 'groq', 'mistral']);
 export const ALLOWED_OUTPUT_FORMATS = new Set(['text', 'json']);
+
+// Provider Metadata Configuration
+export const PROVIDER_CONFIGS = {
+  gemini: {
+    id: 'gemini',
+    name: 'Google Gemini',
+    envKey: 'GEMINI_API_KEY',
+    defaultModel: DEFAULT_GEMINI_MODEL,
+    protocol: 'gemini'
+  },
+  groq: {
+    id: 'groq',
+    name: 'Groq',
+    envKey: 'GROQ_API_KEY',
+    defaultModel: DEFAULT_GROQ_MODEL,
+    protocol: 'openai-compatible',
+    baseUrl: 'https://api.groq.com/openai/v1'
+  },
+  openai: {
+    id: 'openai',
+    name: 'OpenAI',
+    envKey: 'OPENAI_API_KEY',
+    defaultModel: DEFAULT_OPENAI_MODEL,
+    protocol: 'openai-compatible',
+    baseUrl: 'https://api.openai.com/v1'
+  },
+  mistral: {
+    id: 'mistral',
+    name: 'Mistral AI',
+    envKey: 'MISTRAL_API_KEY',
+    defaultModel: DEFAULT_MISTRAL_MODEL,
+    protocol: 'openai-compatible',
+    baseUrl: 'https://api.mistral.ai/v1'
+  },
+  'openai-compatible': {
+    id: 'openai-compatible',
+    name: 'OpenAI-Compatible Gateway',
+    envKey: 'OPENAI_API_KEY',
+    defaultModel: DEFAULT_OPENAI_MODEL,
+    protocol: 'openai-compatible',
+    baseUrl: 'https://api.openai.com/v1'
+  }
+};
+
+// Default automatic failover priority cascade
+export const DEFAULT_FAILOVER_CHAIN = [
+  { provider: 'gemini', model: DEFAULT_GEMINI_MODEL },
+  { provider: 'groq', model: DEFAULT_GROQ_MODEL },
+  { provider: 'openai', model: DEFAULT_OPENAI_MODEL },
+  { provider: 'mistral', model: DEFAULT_MISTRAL_MODEL }
+];
 
 // Allowlist of approved HTTPS hosts for AI inference endpoints
 export const APPROVED_HTTPS_HOSTS = new Set([
@@ -108,11 +168,28 @@ export const sanitizeHeaders = (headers) => {
  */
 export const sanitizeSecretsInString = (text) => {
   if (!text || typeof text !== 'string') return '';
-  return text
+  let sanitized = text
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED_GEMINI_KEY]')
+    .replace(/gsk_[0-9A-Za-z_-]{20,}/g, '[REDACTED_GROQ_KEY]')
     .replace(/sk-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENAI_KEY]')
     .replace(/Bearer\s+[0-9A-Za-z_.\-]+/gi, 'Bearer [REDACTED]')
     .replace(/([?&]key=)[^&\s]+/gi, '$1[REDACTED]');
+
+  // Scrub any active environment keys if present as literal substrings
+  const activeKeys = [
+    process.env.GEMINI_API_KEY,
+    process.env.GROQ_API_KEY,
+    process.env.OPENAI_API_KEY,
+    process.env.MISTRAL_API_KEY
+  ].filter((k) => typeof k === 'string' && k.trim().length >= 8);
+
+  for (const key of activeKeys) {
+    if (sanitized.includes(key.trim())) {
+      sanitized = sanitized.replaceAll(key.trim(), '[REDACTED_KEY]');
+    }
+  }
+
+  return sanitized;
 };
 
 /**
@@ -305,6 +382,58 @@ export const parseStructuredOutput = (text, outputFormat) => {
 };
 
 /**
+ * Parses the Retry-After HTTP header value (seconds or HTTP-date) to milliseconds
+ * @param {string|null} retryAfterHeader
+ * @returns {number|null} delay in milliseconds or null if not present/invalid
+ */
+export const parseRetryAfter = (retryAfterHeader) => {
+  if (!retryAfterHeader || typeof retryAfterHeader !== 'string') return null;
+  const trimmed = retryAfterHeader.trim();
+  const seconds = parseInt(trimmed, 10);
+  if (!isNaN(seconds) && seconds >= 0) {
+    return seconds * 1000;
+  }
+  const dateMs = Date.parse(trimmed);
+  if (!isNaN(dateMs)) {
+    const diff = dateMs - Date.now();
+    return diff > 0 ? diff : 0;
+  }
+  return null;
+};
+
+/**
+ * Calculates exponential backoff with randomized jitter and Retry-After respect
+ * @param {number} attempt - 0-indexed retry attempt (0 = first retry)
+ * @param {number|null} [retryAfterMs] - optional Retry-After parsed value
+ * @returns {number} delay in milliseconds
+ */
+export const calculateBackoffWithJitter = (attempt, retryAfterMs = null) => {
+  if (typeof retryAfterMs === 'number' && retryAfterMs > 0) {
+    return Math.min(retryAfterMs, MAX_RETRY_DELAY_MS);
+  }
+  const base = INITIAL_RETRY_DELAY_MS * Math.pow(BACKOFF_MULTIPLIER, attempt);
+  const capped = Math.min(base, MAX_RETRY_DELAY_MS);
+  const jitter = Math.floor(Math.random() * (capped * MAX_JITTER_RATIO));
+  return capped + jitter;
+};
+
+/**
+ * Checks whether an HTTP status or network error is retryable
+ * @param {number|null} status
+ * @param {Error|null} [err]
+ * @returns {boolean}
+ */
+export const isRetryableError = (status, err = null) => {
+  if (typeof status === 'number' && RETRYABLE_HTTP_STATUSES.has(status)) {
+    return true;
+  }
+  if (err && (err.name === 'TypeError' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT')) {
+    return true;
+  }
+  return false;
+};
+
+/**
  * Sanitizes and extracts provider error message without leaking secrets
  * @param {number} status
  * @param {string} responseText
@@ -312,11 +441,26 @@ export const parseStructuredOutput = (text, outputFormat) => {
  * @returns {string}
  */
 export const formatProviderError = (status, responseText, providerName) => {
-  if (status === 401) {
-    return `AI provider authentication failed (HTTP 401). Verify that your server API key is configured correctly.`;
+  if (status === 401 || status === 403) {
+    return `AI provider authentication failed (HTTP ${status}). Verify that your server API key is configured correctly.`;
   }
   if (status === 429) {
-    return `AI provider rate limit reached (HTTP 429). Please retry after cooldown.`;
+    let extractedMsg = '';
+    if (responseText) {
+      try {
+        const parsed = JSON.parse(responseText);
+        extractedMsg =
+          parsed.error?.message ||
+          parsed.message ||
+          (typeof parsed.error === 'string' ? parsed.error : '');
+      } catch {
+        extractedMsg = responseText.slice(0, 200);
+      }
+    }
+    const safeMsg = sanitizeSecretsInString(extractedMsg);
+    return safeMsg
+      ? `AI provider rate limit reached (HTTP 429): ${safeMsg}. Please retry after cooldown.`
+      : `AI provider rate limit reached (HTTP 429). Please retry after cooldown.`;
   }
   if (status === 404) {
     let extractedMsg = '';
@@ -326,8 +470,7 @@ export const formatProviderError = (status, responseText, providerName) => {
         extractedMsg =
           parsed.error?.message ||
           parsed.message ||
-          parsed.error ||
-          '';
+          (typeof parsed.error === 'string' ? parsed.error : '');
       } catch {
         extractedMsg = responseText.slice(0, 200);
       }
@@ -336,7 +479,26 @@ export const formatProviderError = (status, responseText, providerName) => {
     return `AI model not found or unsupported by provider (HTTP 404). ${safeMsg || 'Verify that the configured model name is valid and supported by your API key tier.'}`;
   }
   if (status >= 500) {
-    return `AI provider upstream service error (HTTP ${status}). The service may be temporarily unavailable.`;
+    let extractedMsg = '';
+    let extractedStatus = '';
+    if (responseText) {
+      try {
+        const parsed = JSON.parse(responseText);
+        extractedMsg =
+          parsed.error?.message ||
+          parsed.message ||
+          (typeof parsed.error === 'string' ? parsed.error : '');
+        if (parsed.error?.status) {
+          extractedStatus = ` - ${parsed.error.status}`;
+        }
+      } catch {
+        extractedMsg = responseText.slice(0, 200);
+      }
+    }
+    const safeMsg = sanitizeSecretsInString(extractedMsg);
+    return safeMsg
+      ? `AI provider upstream service error (HTTP ${status}${extractedStatus}): ${safeMsg}`
+      : `AI provider upstream service error (HTTP ${status}). The service may be temporarily unavailable.`;
   }
 
   let extractedMsg = '';
@@ -346,8 +508,7 @@ export const formatProviderError = (status, responseText, providerName) => {
       extractedMsg =
         parsed.error?.message ||
         parsed.message ||
-        parsed.error ||
-        '';
+        (typeof parsed.error === 'string' ? parsed.error : '');
     } catch {
       extractedMsg = responseText.slice(0, 200);
     }
@@ -408,141 +569,248 @@ const executeGeminiRequest = async (config, options) => {
     payload.generationConfig.responseMimeType = 'application/json';
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => {
-    controller.abort(new Error('AI_REQUEST_TIMEOUT'));
-  }, config.timeoutMs);
-
-  const startTime = Date.now();
+  const maxRetries = typeof options.maxRetries === 'number' ? options.maxRetries : MAX_AI_RETRIES;
+  const sleepFn = options._sleepFn || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const fetchFn = options._fetchFn || globalThis.fetch;
 
-  try {
-    const response = await fetchFn(endpointUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+  const overallStartTime = Date.now();
+  let lastErrorResult = null;
+  let attemptCount = 0;
 
-    clearTimeout(timer);
-    const durationMs = Date.now() - startTime;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    attemptCount++;
+    const elapsedTimeMs = Date.now() - overallStartTime;
+    const remainingBudgetMs = config.timeoutMs - elapsedTimeMs;
 
-    const { text, sizeBytes, isOversized } = await readStreamWithLimit(
-      response,
-      MAX_RESPONSE_BYTES
-    );
-
-    if (isOversized) {
-      return {
-        success: false,
-        error: `AI response body exceeded maximum limit of 512 KB.`,
-        durationMs
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: formatProviderError(response.status, text, 'Gemini'),
-        durationMs,
-        status: response.status
-      };
-    }
-
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(text);
-    } catch {
-      return {
-        success: false,
-        error: 'AI provider returned an unparseable response envelope.',
-        durationMs
-      };
-    }
-
-    // Extract text from Gemini structure
-    const candidate = parsedResponse.candidates?.[0];
-    if (!candidate) {
-      const blockReason = parsedResponse.promptFeedback?.blockReason;
-      return {
-        success: false,
-        error: blockReason
-          ? `AI request was blocked by provider safety policy: ${blockReason}`
-          : 'AI provider returned empty candidates in response.',
-        durationMs
-      };
-    }
-
-    if (candidate.finishReason === 'SAFETY') {
-      return {
-        success: false,
-        error: 'AI response generation was blocked by provider safety filter.',
-        durationMs
-      };
-    }
-
-    const generatedText = candidate.content?.parts?.[0]?.text || '';
-    const structuredOutput = parseStructuredOutput(generatedText, config.outputFormat);
-
-    const usage = {
-      promptTokens: parsedResponse.usageMetadata?.promptTokenCount || 0,
-      completionTokens: parsedResponse.usageMetadata?.candidatesTokenCount || 0,
-      totalTokens: parsedResponse.usageMetadata?.totalTokenCount || 0
-    };
-
-    return {
-      success: true,
-      text: generatedText,
-      structured: structuredOutput,
-      model,
-      provider: 'gemini',
-      usage,
-      durationMs,
-      telemetry: {
-        endpoint: sanitizedEndpoint,
-        status: response.status,
-        model,
-        durationMs
-      }
-    };
-  } catch (err) {
-    clearTimeout(timer);
-    const durationMs = Date.now() - startTime;
-
-    if (controller.signal.aborted || err.name === 'AbortError' || err.message === 'AI_REQUEST_TIMEOUT') {
+    if (remainingBudgetMs <= 0) {
       return {
         success: false,
         error: `AI request timed out after ${config.timeoutMs}ms.`,
-        durationMs,
-        isTimeout: true
+        durationMs: Date.now() - overallStartTime,
+        isTimeout: true,
+        attempts: attemptCount
       };
     }
 
-    return {
-      success: false,
-      error: `AI provider connection error: ${sanitizeSecretsInString(err.message || 'Unknown network error')}`,
-      durationMs
-    };
+    const controller = new AbortController();
+    const attemptTimeoutMs = remainingBudgetMs;
+    const timer = setTimeout(() => {
+      controller.abort(new Error('AI_REQUEST_TIMEOUT'));
+    }, attemptTimeoutMs);
+
+    const attemptStartTime = Date.now();
+
+    try {
+      const response = await fetchFn(endpointUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timer);
+
+      const { text, sizeBytes, isOversized } = await readStreamWithLimit(
+        response,
+        MAX_RESPONSE_BYTES
+      );
+
+      if (isOversized) {
+        return {
+          success: false,
+          error: `AI response body exceeded maximum limit of 512 KB.`,
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      if (!response.ok) {
+        const errorMsg = formatProviderError(response.status, text, 'Gemini');
+        lastErrorResult = {
+          success: false,
+          error: errorMsg,
+          durationMs: Date.now() - overallStartTime,
+          status: response.status,
+          attempts: attemptCount,
+          telemetry: {
+            endpoint: sanitizedEndpoint,
+            status: response.status,
+            model,
+            durationMs: Date.now() - overallStartTime,
+            attempts: attemptCount
+          }
+        };
+
+        // Retry only if transient/retryable and retries remain
+        if (isRetryableError(response.status) && attempt < maxRetries) {
+          const retryAfterHeader = response.headers?.get ? response.headers.get('retry-after') : null;
+          const retryAfterMs = parseRetryAfter(retryAfterHeader);
+          const delayMs = calculateBackoffWithJitter(attempt, retryAfterMs);
+
+          if (Date.now() - overallStartTime + delayMs >= config.timeoutMs) {
+            return {
+              ...lastErrorResult,
+              durationMs: Date.now() - overallStartTime
+            };
+          }
+
+          await sleepFn(delayMs);
+          continue;
+        }
+
+        return lastErrorResult;
+      }
+
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(text);
+      } catch {
+        return {
+          success: false,
+          error: 'AI provider returned an unparseable response envelope.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      // Extract text from Gemini structure
+      const candidate = parsedResponse.candidates?.[0];
+      if (!candidate) {
+        const blockReason = parsedResponse.promptFeedback?.blockReason;
+        return {
+          success: false,
+          error: blockReason
+            ? `AI request was blocked by provider safety policy: ${blockReason}`
+            : 'AI provider returned empty candidates in response.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      if (candidate.finishReason === 'SAFETY') {
+        return {
+          success: false,
+          error: 'AI response generation was blocked by provider safety filter.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      const generatedText = candidate.content?.parts?.[0]?.text || '';
+      const structuredOutput = parseStructuredOutput(generatedText, config.outputFormat);
+
+      const usage = {
+        promptTokens: parsedResponse.usageMetadata?.promptTokenCount || 0,
+        completionTokens: parsedResponse.usageMetadata?.candidatesTokenCount || 0,
+        totalTokens: parsedResponse.usageMetadata?.totalTokenCount || 0
+      };
+
+      const totalDurationMs = Date.now() - overallStartTime;
+
+      return {
+        success: true,
+        text: generatedText,
+        structured: structuredOutput,
+        model,
+        provider: 'gemini',
+        usage,
+        durationMs: totalDurationMs,
+        attempts: attemptCount,
+        telemetry: {
+          endpoint: sanitizedEndpoint,
+          status: response.status,
+          model,
+          durationMs: totalDurationMs,
+          attempts: attemptCount
+        }
+      };
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = controller.signal.aborted || err.name === 'AbortError' || err.message === 'AI_REQUEST_TIMEOUT';
+      const isBudgetExhausted = Date.now() - overallStartTime >= config.timeoutMs;
+
+      if (isAbort && isBudgetExhausted) {
+        return {
+          success: false,
+          error: `AI request timed out after ${config.timeoutMs}ms.`,
+          durationMs: Date.now() - overallStartTime,
+          isTimeout: true,
+          attempts: attemptCount
+        };
+      }
+
+      if (attempt < maxRetries && isRetryableError(null, err)) {
+        const delayMs = calculateBackoffWithJitter(attempt);
+        if (Date.now() - overallStartTime + delayMs < config.timeoutMs) {
+          await sleepFn(delayMs);
+          continue;
+        }
+      }
+
+      return {
+        success: false,
+        error: `AI provider connection error: ${sanitizeSecretsInString(err.message || 'Unknown network error')}`,
+        durationMs: Date.now() - overallStartTime,
+        attempts: attemptCount
+      };
+    }
   }
+
+  return lastErrorResult || {
+    success: false,
+    error: 'AI request failed after exhausting all retry attempts.',
+    durationMs: Date.now() - overallStartTime,
+    attempts: attemptCount
+  };
 };
 
 /**
  * Executes OpenAI-compatible chat completions REST request
  */
 const executeOpenAiRequest = async (config, options) => {
-  const apiKey = process.env.OPENAI_API_KEY;
+  let apiKey;
+  let baseUrl;
+  let providerLabel;
+  let defaultModel;
+
+  if (config.provider === 'groq') {
+    apiKey = process.env.GROQ_API_KEY;
+    baseUrl = (process.env.GROQ_BASE_URL || options.baseUrl || 'https://api.groq.com/openai/v1').replace(/\/+$/, '');
+    providerLabel = 'Groq';
+    defaultModel = DEFAULT_GROQ_MODEL;
+  } else if (config.provider === 'mistral') {
+    apiKey = process.env.MISTRAL_API_KEY;
+    baseUrl = (process.env.MISTRAL_BASE_URL || options.baseUrl || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
+    providerLabel = 'Mistral AI';
+    defaultModel = DEFAULT_MISTRAL_MODEL;
+  } else if (config.provider === 'openai-compatible') {
+    apiKey = process.env.OPENAI_API_KEY;
+    baseUrl = (options.baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    providerLabel = 'OpenAI-Compatible';
+    defaultModel = DEFAULT_OPENAI_MODEL;
+  } else {
+    apiKey = process.env.OPENAI_API_KEY;
+    baseUrl = (process.env.OPENAI_BASE_URL || options.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+    providerLabel = 'OpenAI';
+    defaultModel = DEFAULT_OPENAI_MODEL;
+  }
+
   if (!apiKey || !apiKey.trim()) {
+    const envVarName = config.provider === 'groq'
+      ? 'GROQ_API_KEY'
+      : config.provider === 'mistral'
+        ? 'MISTRAL_API_KEY'
+        : 'OPENAI_API_KEY';
     return {
       success: false,
-      error: 'AI execution failed: OPENAI_API_KEY is not configured in server environment variables.',
+      error: `AI execution failed: ${envVarName} is not configured in server environment variables.`,
       durationMs: 0
     };
   }
 
-  const model = config.model || DEFAULT_OPENAI_MODEL;
-  const baseUrl = (process.env.OPENAI_BASE_URL || options.baseUrl || 'https://api.openai.com/v1').replace(/\/+$/, '');
+  const model = config.model || defaultModel;
   const endpointUrl = `${baseUrl}/chat/completions`;
   const sanitizedEndpoint = sanitizeUrl(endpointUrl);
 
@@ -550,7 +818,7 @@ const executeOpenAiRequest = async (config, options) => {
   if (!endpointValidation.isValid) {
     return {
       success: false,
-      error: `OpenAI endpoint blocked: ${endpointValidation.error}`,
+      error: `${providerLabel} endpoint blocked: ${endpointValidation.error}`,
       durationMs: 0
     };
   }
@@ -572,120 +840,458 @@ const executeOpenAiRequest = async (config, options) => {
     payload.response_format = { type: 'json_object' };
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => {
-    controller.abort(new Error('AI_REQUEST_TIMEOUT'));
-  }, config.timeoutMs);
-
-  const startTime = Date.now();
+  const maxRetries = typeof options.maxRetries === 'number' ? options.maxRetries : MAX_AI_RETRIES;
+  const sleepFn = options._sleepFn || ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
   const fetchFn = options._fetchFn || globalThis.fetch;
 
-  try {
-    const response = await fetchFn(endpointUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
+  const overallStartTime = Date.now();
+  let lastErrorResult = null;
+  let attemptCount = 0;
 
-    clearTimeout(timer);
-    const durationMs = Date.now() - startTime;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    attemptCount++;
+    const elapsedTimeMs = Date.now() - overallStartTime;
+    const remainingBudgetMs = config.timeoutMs - elapsedTimeMs;
 
-    const { text, sizeBytes, isOversized } = await readStreamWithLimit(
-      response,
-      MAX_RESPONSE_BYTES
-    );
-
-    if (isOversized) {
-      return {
-        success: false,
-        error: `AI response body exceeded maximum limit of 512 KB.`,
-        durationMs
-      };
-    }
-
-    if (!response.ok) {
-      return {
-        success: false,
-        error: formatProviderError(response.status, text, 'OpenAI'),
-        durationMs,
-        status: response.status
-      };
-    }
-
-    let parsedResponse;
-    try {
-      parsedResponse = JSON.parse(text);
-    } catch {
-      return {
-        success: false,
-        error: 'AI provider returned an unparseable response envelope.',
-        durationMs
-      };
-    }
-
-    const choice = parsedResponse.choices?.[0];
-    if (!choice || !choice.message) {
-      return {
-        success: false,
-        error: 'AI provider returned empty choices in response.',
-        durationMs
-      };
-    }
-
-    const generatedText = choice.message.content || '';
-    const structuredOutput = parseStructuredOutput(generatedText, config.outputFormat);
-
-    const usage = {
-      promptTokens: parsedResponse.usage?.prompt_tokens || 0,
-      completionTokens: parsedResponse.usage?.completion_tokens || 0,
-      totalTokens: parsedResponse.usage?.total_tokens || 0
-    };
-
-    return {
-      success: true,
-      text: generatedText,
-      structured: structuredOutput,
-      model,
-      provider: config.provider,
-      usage,
-      durationMs,
-      telemetry: {
-        endpoint: sanitizedEndpoint,
-        status: response.status,
-        model,
-        durationMs
-      }
-    };
-  } catch (err) {
-    clearTimeout(timer);
-    const durationMs = Date.now() - startTime;
-
-    if (controller.signal.aborted || err.name === 'AbortError' || err.message === 'AI_REQUEST_TIMEOUT') {
+    if (remainingBudgetMs <= 0) {
       return {
         success: false,
         error: `AI request timed out after ${config.timeoutMs}ms.`,
-        durationMs,
-        isTimeout: true
+        durationMs: Date.now() - overallStartTime,
+        isTimeout: true,
+        attempts: attemptCount
       };
     }
 
-    return {
+    const controller = new AbortController();
+    const attemptTimeoutMs = remainingBudgetMs;
+    const timer = setTimeout(() => {
+      controller.abort(new Error('AI_REQUEST_TIMEOUT'));
+    }, attemptTimeoutMs);
+
+    const attemptStartTime = Date.now();
+
+    try {
+      const response = await fetchFn(endpointUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      clearTimeout(timer);
+
+      const { text, sizeBytes, isOversized } = await readStreamWithLimit(
+        response,
+        MAX_RESPONSE_BYTES
+      );
+
+      if (isOversized) {
+        return {
+          success: false,
+          error: `AI response body exceeded maximum limit of 512 KB.`,
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      if (!response.ok) {
+        const errorMsg = formatProviderError(response.status, text, providerLabel);
+        lastErrorResult = {
+          success: false,
+          error: errorMsg,
+          durationMs: Date.now() - overallStartTime,
+          status: response.status,
+          attempts: attemptCount,
+          telemetry: {
+            endpoint: sanitizedEndpoint,
+            status: response.status,
+            model,
+            durationMs: Date.now() - overallStartTime,
+            attempts: attemptCount
+          }
+        };
+
+        if (isRetryableError(response.status) && attempt < maxRetries) {
+          const retryAfterHeader = response.headers?.get ? response.headers.get('retry-after') : null;
+          const retryAfterMs = parseRetryAfter(retryAfterHeader);
+          const delayMs = calculateBackoffWithJitter(attempt, retryAfterMs);
+
+          if (Date.now() - overallStartTime + delayMs >= config.timeoutMs) {
+            return {
+              ...lastErrorResult,
+              durationMs: Date.now() - overallStartTime
+            };
+          }
+
+          await sleepFn(delayMs);
+          continue;
+        }
+
+        return lastErrorResult;
+      }
+
+      let parsedResponse;
+      try {
+        parsedResponse = JSON.parse(text);
+      } catch {
+        return {
+          success: false,
+          error: 'AI provider returned an unparseable response envelope.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      const choice = parsedResponse.choices?.[0];
+      if (!choice || !choice.message) {
+        return {
+          success: false,
+          error: 'AI provider returned empty choices in response.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      const generatedText = choice.message.content || '';
+      const structuredOutput = parseStructuredOutput(generatedText, config.outputFormat);
+
+      const usage = {
+        promptTokens: parsedResponse.usage?.prompt_tokens || 0,
+        completionTokens: parsedResponse.usage?.completion_tokens || 0,
+        totalTokens: parsedResponse.usage?.total_tokens || 0
+      };
+
+      const totalDurationMs = Date.now() - overallStartTime;
+
+      return {
+        success: true,
+        text: generatedText,
+        structured: structuredOutput,
+        model,
+        provider: config.provider,
+        usage,
+        durationMs: totalDurationMs,
+        attempts: attemptCount,
+        telemetry: {
+          endpoint: sanitizedEndpoint,
+          status: response.status,
+          model,
+          durationMs: totalDurationMs,
+          attempts: attemptCount
+        }
+      };
+    } catch (err) {
+      clearTimeout(timer);
+      const isAbort = controller.signal.aborted || err.name === 'AbortError' || err.message === 'AI_REQUEST_TIMEOUT';
+      const isBudgetExhausted = Date.now() - overallStartTime >= config.timeoutMs;
+
+      if (isAbort && isBudgetExhausted) {
+        return {
+          success: false,
+          error: `AI request timed out after ${config.timeoutMs}ms.`,
+          durationMs: Date.now() - overallStartTime,
+          isTimeout: true,
+          attempts: attemptCount
+        };
+      }
+
+      if (attempt < maxRetries && isRetryableError(null, err)) {
+        const delayMs = calculateBackoffWithJitter(attempt);
+        if (Date.now() - overallStartTime + delayMs < config.timeoutMs) {
+          await sleepFn(delayMs);
+          continue;
+        }
+      }
+
+      return {
+        success: false,
+        error: `AI provider connection error: ${sanitizeSecretsInString(err.message || 'Unknown network error')}`,
+        durationMs: Date.now() - overallStartTime,
+        attempts: attemptCount
+      };
+    }
+  }
+
+  return lastErrorResult || {
+    success: false,
+    error: 'AI request failed after exhausting all retry attempts.',
+    durationMs: Date.now() - overallStartTime,
+    attempts: attemptCount
+  };
+};
+
+/**
+ * Resolves single provider execution without failover
+ * @param {Object} config
+ * @param {Object} options
+ * @returns {Promise<Object>}
+ */
+export const executeSingleProvider = async (config, options) => {
+  if (config.provider === 'gemini') {
+    return await executeGeminiRequest(config, options);
+  }
+  return await executeOpenAiRequest(config, options);
+};
+
+/**
+ * Resolves the ordered failover cascade based on primary selection
+ * @param {string} primaryProvider
+ * @param {string} [primaryModel]
+ * @param {Array<{provider: string, model: string}>} [customChain]
+ * @returns {Array<{provider: string, model: string}>}
+ */
+export const buildFailoverChain = (primaryProvider = 'gemini', primaryModel = null, customChain = null) => {
+  if (Array.isArray(customChain) && customChain.length > 0) {
+    return customChain.map((item) => ({
+      provider: (item.provider || 'gemini').toLowerCase(),
+      model: item.model || PROVIDER_CONFIGS[item.provider?.toLowerCase()]?.defaultModel || DEFAULT_OPENAI_MODEL
+    }));
+  }
+
+  const normalizedPrimary = (primaryProvider || 'gemini').toLowerCase();
+  const primaryConfig = PROVIDER_CONFIGS[normalizedPrimary] || PROVIDER_CONFIGS.gemini;
+  const resolvedPrimaryModel = primaryModel?.trim() || primaryConfig.defaultModel;
+
+  const chain = [{ provider: normalizedPrimary, model: resolvedPrimaryModel }];
+
+  // Append remaining default providers in designated failover order
+  for (const item of DEFAULT_FAILOVER_CHAIN) {
+    if (item.provider !== normalizedPrimary) {
+      chain.push({
+        provider: item.provider,
+        model: item.model
+      });
+    }
+  }
+
+  return chain;
+};
+
+/**
+ * Executes AI request with automatic multi-provider failover
+ * Cascades across providers strictly on transient errors (429, 5xx, timeouts, network disconnects).
+ * Enforces one overall node timeout budget across all attempts.
+ * Skips unconfigured fallback API keys gracefully.
+ * Permanent errors (400, 401, 403, 404, safety filter blocks) fail immediately without failover.
+ */
+export const executeWithFailover = async (config, options) => {
+  const overallStartTime = Date.now();
+  const overallDeadline = overallStartTime + config.timeoutMs;
+  const failoverChain = buildFailoverChain(config.provider, config.model, options.failoverChain);
+  const failoverLog = [];
+  let lastTransientResult = null;
+
+  for (let idx = 0; idx < failoverChain.length; idx++) {
+    const candidate = failoverChain[idx];
+    const isPrimary = idx === 0;
+    const providerMeta = PROVIDER_CONFIGS[candidate.provider] || { envKey: 'API_KEY', name: candidate.provider };
+
+    // 1. Check remaining global timeout budget
+    const remainingBudgetMs = overallDeadline - Date.now();
+    if (remainingBudgetMs < 500) {
+      failoverLog.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        status: 'timeout',
+        error: `Overall timeout budget (${config.timeoutMs}ms) exhausted before attempting provider.`,
+        durationMs: 0
+      });
+      return {
+        success: false,
+        error: `AI execution timed out across provider cascade after ${config.timeoutMs}ms.`,
+        durationMs: Date.now() - overallStartTime,
+        isTimeout: true,
+        failoverLog,
+        telemetry: {
+          failoverLog,
+          totalAttempts: failoverLog.length,
+          failoverTriggered: idx > 0,
+          durationMs: Date.now() - overallStartTime
+        }
+      };
+    }
+
+    // 2. Check credentials
+    let hasKey = false;
+    if (candidate.provider === 'gemini') {
+      hasKey = !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
+    } else if (candidate.provider === 'groq') {
+      hasKey = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim());
+    } else if (candidate.provider === 'mistral') {
+      hasKey = !!(process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY.trim());
+    } else {
+      hasKey = !!(process.env.OPENAI_API_KEY && process.env.OPENAI_API_KEY.trim());
+    }
+
+    if (!hasKey) {
+      if (isPrimary) {
+        // Primary provider explicitly selected with missing credentials must fail immediately
+        return {
+          success: false,
+          error: `AI execution failed: ${providerMeta.envKey} is not configured in server environment variables.`,
+          durationMs: Date.now() - overallStartTime,
+          failoverLog: [
+            {
+              provider: candidate.provider,
+              model: candidate.model,
+              status: 'missing_credentials',
+              error: `${providerMeta.envKey} not configured`,
+              durationMs: 0
+            }
+          ]
+        };
+      }
+
+      // Fallback candidate without configured credentials is safely skipped
+      failoverLog.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        status: 'skipped',
+        reason: `${providerMeta.envKey} is not configured in server environment`,
+        durationMs: 0
+      });
+      continue;
+    }
+
+    // 3. Prepare candidate execution config & options
+    const candidateConfig = {
+      ...config,
+      provider: candidate.provider,
+      model: candidate.model,
+      timeoutMs: remainingBudgetMs
+    };
+
+    // When cascading across multiple providers, default each provider to 0 retries
+    // so transient failures immediately fail over to the next healthy provider
+    const candidateOptions = {
+      ...options,
+      maxRetries: typeof options.maxRetriesPerProvider === 'number' ? options.maxRetriesPerProvider : 0
+    };
+
+    const attemptStartTime = Date.now();
+    const result = await executeSingleProvider(candidateConfig, candidateOptions);
+    const attemptDurationMs = Date.now() - attemptStartTime;
+
+    // 4. Handle Result
+    if (result.success) {
+      failoverLog.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        status: 200,
+        success: true,
+        durationMs: attemptDurationMs,
+        attempts: result.attempts || 1
+      });
+
+      return {
+        ...result,
+        failoverLog,
+        telemetry: {
+          ...(result.telemetry || {}),
+          failoverLog,
+          failoverTriggered: idx > 0,
+          totalAttempts: failoverLog.length,
+          primaryProvider: config.provider,
+          finalProvider: candidate.provider,
+          finalModel: candidate.model
+        }
+      };
+    }
+
+    // Provider failed — classify whether error is transient/retryable
+    const isTransient =
+      result.isTimeout ||
+      isRetryableError(result.status) ||
+      (typeof result.error === 'string' && (
+        result.error.includes('AI provider connection error') ||
+        result.error.includes('fetch failed') ||
+        result.error.includes('ECONNRESET') ||
+        result.error.includes('ETIMEDOUT')
+      ));
+
+    if (isTransient) {
+      lastTransientResult = result;
+      failoverLog.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        status: result.status || (result.isTimeout ? 'timeout' : 'network_error'),
+        error: result.error,
+        durationMs: attemptDurationMs,
+        success: false,
+        retryable: true
+      });
+
+      // If overall deadline is now reached, stop cascade and return timeout
+      if (Date.now() >= overallDeadline) {
+        return {
+          success: false,
+          error: `AI execution timed out across provider cascade after ${config.timeoutMs}ms.`,
+          durationMs: Date.now() - overallStartTime,
+          isTimeout: true,
+          failoverLog,
+          telemetry: {
+            failoverLog,
+            failoverTriggered: idx > 0,
+            totalAttempts: failoverLog.length,
+            durationMs: Date.now() - overallStartTime
+          }
+        };
+      }
+
+      // Continue to next provider in failover cascade
+      continue;
+    }
+
+    // Permanent error (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Model Not Found, Safety filter block)
+    // Abort failover cascade immediately without calling next provider
+    failoverLog.push({
+      provider: candidate.provider,
+      model: candidate.model,
+      status: result.status || 'permanent_error',
+      error: result.error,
+      durationMs: attemptDurationMs,
       success: false,
-      error: `AI provider connection error: ${sanitizeSecretsInString(err.message || 'Unknown network error')}`,
-      durationMs
+      retryable: false,
+      permanent: true
+    });
+
+    return {
+      ...result,
+      failoverLog,
+      telemetry: {
+        ...(result.telemetry || {}),
+        failoverLog,
+        failoverTriggered: idx > 0,
+        totalAttempts: failoverLog.length,
+        durationMs: Date.now() - overallStartTime
+      }
     };
   }
+
+  // All providers in cascade were attempted or skipped without success
+  return {
+    success: false,
+    error: lastTransientResult?.error || 'All AI providers in automatic failover cascade failed.',
+    durationMs: Date.now() - overallStartTime,
+    failoverLog,
+    telemetry: {
+      failoverLog,
+      failoverTriggered: true,
+      totalAttempts: failoverLog.length,
+      durationMs: Date.now() - overallStartTime
+    }
+  };
 };
 
 /**
  * Main Standalone AI Request Executor Service
  *
  * @param {Object} options
- * @param {string} [options.provider] - 'gemini' | 'openai' | 'openai-compatible' (default: process.env.AI_PROVIDER || 'gemini')
+ * @param {string} [options.provider] - 'gemini' | 'openai' | 'openai-compatible' | 'groq' | 'mistral' (default: process.env.AI_PROVIDER || 'gemini')
  * @param {string} [options.model] - Model name
  * @param {string} options.prompt - Task instruction / prompt
  * @param {string} [options.systemPrompt] - System directive
@@ -694,9 +1300,11 @@ const executeOpenAiRequest = async (config, options) => {
  * @param {number} [options.maxTokens] - Max tokens to generate (default 1024, max 4096)
  * @param {'text'|'json'} [options.outputFormat] - Expected output format (default 'text')
  * @param {number} [options.timeoutMs] - Request timeout in ms (default 15000, min 1000, max 60000)
+ * @param {boolean} [options.enableFailover] - Opt-in multi-provider failover (Gemini -> Groq -> OpenAI -> Mistral)
+ * @param {Array<{provider: string, model: string}>} [options.failoverChain] - Custom failover priority cascade
  * @param {string} [options.baseUrl] - Custom base URL override for openai-compatible endpoints
  * @param {Function} [options._fetchFn] - Internal dependency injection for tests
- * @returns {Promise<{ success: boolean, text?: string, structured?: any, model?: string, provider?: string, usage?: object, durationMs: number, error?: string }>}
+ * @returns {Promise<{ success: boolean, text?: string, structured?: any, model?: string, provider?: string, usage?: object, durationMs: number, error?: string, failoverLog?: Array }>}
  */
 export const executeAiRequest = async (options = {}) => {
   if (!options || typeof options !== 'object') {
@@ -762,9 +1370,11 @@ export const executeAiRequest = async (options = {}) => {
     timeoutMs = MAX_TIMEOUT_MS;
   }
 
+  const resolvedDefaultModel = PROVIDER_CONFIGS[provider]?.defaultModel || (provider === 'gemini' ? DEFAULT_GEMINI_MODEL : DEFAULT_OPENAI_MODEL);
+
   const config = {
     provider,
-    model: options.model?.trim?.() || (provider === 'gemini' ? DEFAULT_GEMINI_MODEL : DEFAULT_OPENAI_MODEL),
+    model: options.model?.trim?.() || resolvedDefaultModel,
     fullPrompt,
     systemPrompt: options.systemPrompt,
     temperature,
@@ -773,11 +1383,10 @@ export const executeAiRequest = async (options = {}) => {
     timeoutMs
   };
 
-  // 6. Route to Provider
-  if (provider === 'gemini') {
-    return await executeGeminiRequest(config, options);
+  // 6. Automatic Failover vs Single Provider Dispatch
+  if (options.enableFailover === true) {
+    return await executeWithFailover(config, options);
   }
 
-  // OpenAI or OpenAI-Compatible
-  return await executeOpenAiRequest(config, options);
+  return await executeSingleProvider(config, options);
 };

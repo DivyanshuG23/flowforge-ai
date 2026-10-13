@@ -794,7 +794,11 @@ export default function PropertiesPanel({
                   value={selectedNode.data?.provider || 'gemini'}
                   onChange={(e) => {
                     const newProvider = e.target.value;
-                    const newModel = newProvider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini';
+                    let newModel = 'gemini-2.5-flash';
+                    if (newProvider === 'groq') newModel = 'llama-3.3-70b-versatile';
+                    else if (newProvider === 'mistral') newModel = 'mistral-small-latest';
+                    else if (newProvider === 'openai' || newProvider === 'openai-compatible') newModel = 'gpt-4o-mini';
+
                     onUpdateNode(selectedNode.id, {
                       ...selectedNode.data,
                       provider: newProvider,
@@ -804,7 +808,9 @@ export default function PropertiesPanel({
                   className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#E5B45B] font-semibold focus:outline-none focus:border-[#E5B45B] transition-colors"
                 >
                   <option value="gemini">Google Gemini (REST API)</option>
+                  <option value="groq">Groq (Llama 3.3 / Mixtral)</option>
                   <option value="openai">OpenAI (Chat Completions)</option>
+                  <option value="mistral">Mistral AI (Mistral Small / Large)</option>
                   <option value="openai-compatible">OpenAI-Compatible Gateway</option>
                 </select>
               </div>
@@ -819,10 +825,14 @@ export default function PropertiesPanel({
                     type="button"
                     onClick={() => {
                       const isCustom = !!selectedNode.data?._isCustomModel;
+                      const defaultPreset =
+                        selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                        selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                        selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini';
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
                         _isCustomModel: !isCustom,
-                        model: !isCustom ? '' : (selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini')
+                        model: !isCustom ? '' : defaultPreset
                       });
                     }}
                     className="text-[10px] text-[#E5B45B] hover:underline"
@@ -840,12 +850,20 @@ export default function PropertiesPanel({
                         model: e.target.value
                       })
                     }
-                    placeholder={selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini'}
+                    placeholder={
+                      selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                      selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
+                    }
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B]"
                   />
                 ) : (
                   <select
-                    value={selectedNode.data?.model || (selectedNode.data?.provider === 'gemini' ? 'gemini-3.5-flash' : 'gpt-4o-mini')}
+                    value={selectedNode.data?.model || (
+                      selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                      selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
+                    )}
                     onChange={(e) =>
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
@@ -854,15 +872,31 @@ export default function PropertiesPanel({
                     }
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F0E6] focus:outline-none focus:border-[#E5B45B]"
                   >
-                    {selectedNode.data?.provider === 'gemini' ? (
+                    {selectedNode.data?.provider === 'gemini' && (
                       <>
-                        <option value="gemini-3.5-flash">gemini-3.5-flash (Fast & Verified)</option>
-                        <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning / High Capability)</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Fast &amp; Verified Stable)</option>
                         <option value="gemini-flash-latest">gemini-flash-latest (Latest Release)</option>
+                        <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning / High Capability)</option>
+                        <option value="gemini-3.5-flash">gemini-3.5-flash (Legacy)</option>
                       </>
-                    ) : (
+                    )}
+                    {selectedNode.data?.provider === 'groq' && (
                       <>
-                        <option value="gpt-4o-mini">gpt-4o-mini (Fast & Intelligent)</option>
+                        <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Flagship Llama 3.3 128k)</option>
+                        <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Sub-100ms Ultra-Fast)</option>
+                        <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (MoE Architecture)</option>
+                      </>
+                    )}
+                    {selectedNode.data?.provider === 'mistral' && (
+                      <>
+                        <option value="mistral-small-latest">mistral-small-latest (Fast Reasoning &amp; Triage)</option>
+                        <option value="mistral-large-latest">mistral-large-latest (Top-tier Flagship)</option>
+                        <option value="codestral-latest">codestral-latest (Code &amp; Systems Logic)</option>
+                      </>
+                    )}
+                    {(selectedNode.data?.provider === 'openai' || selectedNode.data?.provider === 'openai-compatible' || !selectedNode.data?.provider) && (
+                      <>
+                        <option value="gpt-4o-mini">gpt-4o-mini (Fast &amp; Intelligent)</option>
                         <option value="gpt-4o">gpt-4o (High Capability)</option>
                         <option value="gpt-3.5-turbo">gpt-3.5-turbo (Legacy)</option>
                       </>
@@ -1024,12 +1058,69 @@ export default function PropertiesPanel({
                 </div>
               </div>
 
+              {/* Automatic Multi-Provider Failover */}
+              <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-semibold text-[#F5F0E6] flex items-center gap-1.5">
+                      <ShieldCheck className="w-3.5 h-3.5 text-[#E5B45B]" />
+                      Automatic Multi-Provider Failover
+                    </span>
+                    <p className="text-[10px] text-[#B9B0A0]/70">
+                      Cascades across backup providers on transient errors (429, 5xx, timeouts)
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!!selectedNode.data?.enableFailover}
+                      onChange={(e) =>
+                        onUpdateNode(selectedNode.id, {
+                          ...selectedNode.data,
+                          enableFailover: e.target.checked
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-[#151715] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#B9B0A0] after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#059669] peer-checked:after:bg-[#F5F0E6]"></div>
+                  </label>
+                </div>
+
+                {selectedNode.data?.enableFailover && (
+                  <div className="p-2.5 rounded-lg bg-[#151715] border border-[rgba(5,150,105,0.25)] space-y-1.5">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#059669] block">
+                      Cascade Priority Order
+                    </span>
+                    <div className="flex items-center gap-1 text-[11px] text-[#F5F0E6] font-mono flex-wrap">
+                      <span className="px-1.5 py-0.5 rounded bg-[rgba(229,180,91,0.15)] text-[#E5B45B] border border-[rgba(229,180,91,0.3)]">
+                        1. {selectedNode.data?.provider === 'groq' ? 'Groq' : selectedNode.data?.provider === 'mistral' ? 'Mistral' : selectedNode.data?.provider === 'openai' ? 'OpenAI' : 'Gemini'}
+                      </span>
+                      <span className="text-[#B9B0A0]">&rarr;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
+                        2. {selectedNode.data?.provider === 'groq' ? 'Gemini' : 'Groq'}
+                      </span>
+                      <span className="text-[#B9B0A0]">&rarr;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
+                        3. {selectedNode.data?.provider === 'openai' ? 'Groq' : 'OpenAI'}
+                      </span>
+                      <span className="text-[#B9B0A0]">&rarr;</span>
+                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
+                        4. {selectedNode.data?.provider === 'mistral' ? 'OpenAI' : 'Mistral'}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[#B9B0A0]/80 leading-relaxed">
+                      Permanent errors (400, 401, 403, 404, safety filter blocks) fail immediately without cascading. Unconfigured fallback API keys are skipped gracefully.
+                    </p>
+                  </div>
+                )}
+              </div>
+
               {/* Server-Side Credentials Security Notice */}
               <div className="p-2.5 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-start space-x-2 text-[11px] text-[#B9B0A0]">
                 <Info className="w-3.5 h-3.5 text-[#E5B45B] flex-shrink-0 mt-0.5" />
                 <div className="leading-tight">
                   <span className="font-semibold text-[#E5B45B] block mb-0.5">Server-Side Credentials</span>
-                  <span>API keys are loaded securely from server environment variables (<code className="text-[#F5F0E6]">GEMINI_API_KEY</code> / <code className="text-[#F5F0E6]">OPENAI_API_KEY</code>). Secrets are never stored in node definitions or browser bundles.</span>
+                  <span>API keys are loaded securely from server environment variables (<code className="text-[#F5F0E6]">GEMINI_API_KEY</code>, <code className="text-[#F5F0E6]">GROQ_API_KEY</code>, <code className="text-[#F5F0E6]">OPENAI_API_KEY</code>, <code className="text-[#F5F0E6]">MISTRAL_API_KEY</code>). Secrets are never stored in node definitions or browser bundles.</span>
                 </div>
               </div>
             </div>

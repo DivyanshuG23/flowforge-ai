@@ -216,7 +216,7 @@ export default function Home() {
                 Topology: 4 Nodes
               </span>
               <span className="px-2 py-0.5 rounded bg-[#252419] text-[#E5B45B] font-mono text-[11px] border border-[rgba(229,180,91,0.25)]">
-                AI: gemini-3.5-flash
+                AI: gemini-2.5-flash
               </span>
             </div>
           </div>
@@ -517,11 +517,11 @@ export default function Home() {
             </div>
             <h3 className="text-base font-bold text-[#F5F0E6]">Multi-Model AI Integration</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Powered by Google Gemini 3.5 Flash and custom OpenAI models. Ingests context variables, enforces structured JSON output, and computes token telemetry.
+              Powered by Google Gemini 2.5 Flash and custom OpenAI models. Ingests context variables, enforces structured JSON output, and computes token telemetry.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#E5B45B] border border-[rgba(185,176,160,0.1)]">
-                gemini-3.5-flash
+                gemini-2.5-flash
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
                 Structured JSON
@@ -787,7 +787,7 @@ export default function Home() {
             },
             {
               q: "Which AI models and providers can I configure?",
-              a: "FlowForge AI defaults to Google's verified gemini-3.5-flash model, providing sub-second inference with structured JSON formatting. It also supports custom OpenAI-compatible models (e.g. gpt-4o-mini), custom system prompts, temperature controls, and token consumption tracking."
+              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash model, providing sub-second inference with structured JSON formatting. It also supports custom OpenAI-compatible models (e.g. gpt-4o-mini), custom system prompts, temperature controls, and token consumption tracking."
             },
             {
               q: "How does execution telemetry and history work?",

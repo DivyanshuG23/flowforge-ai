@@ -39,6 +39,10 @@ const executeAiNode = async (node, incomingInput) => {
     outputFormat: nodeData.outputFormat,
     timeoutMs: nodeData.timeoutMs,
     baseUrl: nodeData.baseUrl,
+    maxRetries: nodeData.maxRetries,
+    enableFailover: nodeData.enableFailover === true,
+    failoverChain: nodeData.failoverChain,
+    _sleepFn: nodeData._sleepFn,
     input: incomingInput,
     _fetchFn: nodeData._fetchFn
   };
@@ -56,6 +60,7 @@ const executeAiNode = async (node, incomingInput) => {
         provider: aiResult.provider,
         usage: aiResult.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         durationMs: aiResult.durationMs || 0,
+        failoverLog: aiResult.failoverLog || null,
         ...(structuredOutput && typeof structuredOutput === 'object' && !Array.isArray(structuredOutput)
           ? { data: structuredOutput }
           : {})
@@ -67,7 +72,7 @@ const executeAiNode = async (node, incomingInput) => {
   return {
     success: false,
     error: aiResult.error || 'AI node execution failed.',
-    output: null,
+    output: aiResult.failoverLog ? { failoverLog: aiResult.failoverLog } : null,
     requestTelemetry: aiResult.telemetry || null
   };
 };
