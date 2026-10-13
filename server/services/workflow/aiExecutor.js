@@ -1073,10 +1073,11 @@ export const buildFailoverChain = (primaryProvider = 'gemini', primaryModel = nu
 
 /**
  * Executes AI request with automatic multi-provider failover
- * Cascades across providers strictly on transient errors (429, 5xx, timeouts, network disconnects).
+ * Cascades across providers on transient errors (429, 5xx, timeouts, network disconnects)
+ * and provider-specific model unavailability (404).
  * Enforces one overall node timeout budget across all attempts.
  * Skips unconfigured fallback API keys gracefully.
- * Permanent errors (400, 401, 403, 404, safety filter blocks) fail immediately without failover.
+ * Permanent client errors (400, 401, 403, safety filter blocks) fail immediately without failover.
  */
 export const executeWithFailover = async (config, options) => {
   const overallStartTime = Date.now();
@@ -1202,7 +1203,7 @@ export const executeWithFailover = async (config, options) => {
       };
     }
 
-    // Provider failed — classify whether error is transient/retryable
+    // Provider failed — classify error category
     const isTransient =
       result.isTimeout ||
       isRetryableError(result.status) ||
@@ -1213,7 +1214,50 @@ export const executeWithFailover = async (config, options) => {
         result.error.includes('ETIMEDOUT')
       ));
 
-    if (isTransient) {
+    // Provider-specific model availability error (HTTP 404)
+    // When failover is enabled, an unavailable or retired model on one provider
+    // can safely fail over to subsequent providers in the chain (which use their own distinct models).
+    const isModelUnavailable = result.status === 404;
+
+    // Fatal errors that must NEVER cascade to subsequent providers:
+    // 1. Auth/credential invalidity (401 Unauthorized, 403 Forbidden)
+    // 2. Client request format error (400 Bad Request)
+    // 3. Provider safety filter block
+    const isAuthError = result.status === 401 || result.status === 403;
+    const isBadRequest = result.status === 400;
+    const isSafetyBlock = typeof result.error === 'string' && (
+      result.error.includes('safety policy') ||
+      result.error.includes('safety filter') ||
+      result.error.includes('blocked by safety')
+    );
+    const isFatalCascadeError = isAuthError || isBadRequest || isSafetyBlock;
+
+    if (isFatalCascadeError) {
+      failoverLog.push({
+        provider: candidate.provider,
+        model: candidate.model,
+        status: result.status || 'permanent_error',
+        error: result.error,
+        durationMs: attemptDurationMs,
+        success: false,
+        retryable: false,
+        permanent: true
+      });
+
+      return {
+        ...result,
+        failoverLog,
+        telemetry: {
+          ...(result.telemetry || {}),
+          failoverLog,
+          failoverTriggered: idx > 0,
+          totalAttempts: failoverLog.length,
+          durationMs: Date.now() - overallStartTime
+        }
+      };
+    }
+
+    if (isTransient || isModelUnavailable) {
       lastTransientResult = result;
       failoverLog.push({
         provider: candidate.provider,
@@ -1222,7 +1266,8 @@ export const executeWithFailover = async (config, options) => {
         error: result.error,
         durationMs: attemptDurationMs,
         success: false,
-        retryable: true
+        retryable: isTransient,
+        modelUnavailable: isModelUnavailable
       });
 
       // If overall deadline is now reached, stop cascade and return timeout
@@ -1246,7 +1291,7 @@ export const executeWithFailover = async (config, options) => {
       continue;
     }
 
-    // Permanent error (400 Bad Request, 401 Unauthorized, 403 Forbidden, 404 Model Not Found, Safety filter block)
+    // Unrecognized permanent error
     // Abort failover cascade immediately without calling next provider
     failoverLog.push({
       provider: candidate.provider,
