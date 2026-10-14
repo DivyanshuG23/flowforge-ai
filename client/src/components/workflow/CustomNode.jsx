@@ -122,7 +122,7 @@ function CustomNode({ data, selected, isConnectable }) {
       selected ? 'ring-1 ring-[rgba(185,176,160,0.5)] scale-[1.02]' : ''
     }`;
   } else if (runtimeStatus === 'running') {
-    containerBorderClass = `border-[#E5B45B] shadow-glow-gold animate-pulse ${
+    containerBorderClass = `border-[#E5B45B] shadow-glow-gold motion-safe:animate-pulse ${
       selected ? 'ring-2 ring-[#E5B45B]/60 scale-[1.02]' : ''
     }`;
   } else if (runtimeStatus === 'queued' || runtimeStatus === 'pending') {
@@ -182,7 +182,7 @@ function CustomNode({ data, selected, isConnectable }) {
             </span>
           )
         ) : runtimeStatus === 'failed' ? (
-          <span className="flex items-center space-x-1 text-[10px] text-[#C83C3C] font-bold bg-[#C83C3C]/10 px-2 py-0.5 rounded-full border border-[#C83C3C]/30 animate-pulse">
+          <span className="flex items-center space-x-1 text-[10px] text-[#C83C3C] font-bold bg-[#C83C3C]/10 px-2 py-0.5 rounded-full border border-[#C83C3C]/30 motion-safe:animate-pulse">
             <AlertCircle className="w-3 h-3 text-[#C83C3C]" />
             <span>Failed</span>
             {runtimeDurationMs !== undefined && (
@@ -198,7 +198,7 @@ function CustomNode({ data, selected, isConnectable }) {
           </span>
         ) : runtimeStatus === 'running' ? (
           <span className="flex items-center space-x-1 text-[10px] text-[#E5B45B] font-bold bg-[#252419] px-2 py-0.5 rounded-full border border-[rgba(229,180,91,0.3)]">
-            <Loader2 className="w-3 h-3 animate-spin text-[#E5B45B]" />
+            <Loader2 className="w-3 h-3 motion-safe:animate-spin text-[#E5B45B]" />
             <span>Running</span>
           </span>
         ) : runtimeStatus === 'queued' || runtimeStatus === 'pending' ? (

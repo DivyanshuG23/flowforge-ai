@@ -245,7 +245,7 @@ export default function Templates() {
 
               {isLoadingUserWorkflows ? (
                 <div className="py-16 text-center space-y-2">
-                  <Loader2 className="w-6 h-6 text-[#E5B45B] animate-spin mx-auto" />
+                  <Loader2 className="w-6 h-6 text-[#E5B45B] motion-safe:animate-spin mx-auto" />
                   <p className="text-xs text-[#B9B0A0]">Loading your workspace workflows...</p>
                 </div>
               ) : userWorkflowsError ? (
@@ -302,7 +302,7 @@ export default function Templates() {
                             className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.25)] text-xs font-semibold transition-all duration-200 disabled:opacity-50"
                           >
                             {instantiatingId === wf._id ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
                             ) : (
                               <Copy className="w-3.5 h-3.5" />
                             )}
@@ -410,7 +410,7 @@ export default function Templates() {
                             aria-label={`Use ${template.name} blueprint`}
                           >
                             {isDeploying ? (
-                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                              <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
                             ) : (
                               <Sparkles className="w-3.5 h-3.5" />
                             )}

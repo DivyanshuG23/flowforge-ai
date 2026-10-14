@@ -121,12 +121,12 @@ export default function EditorToolbar({
           {/* Sync Status Badge */}
           {isSaving ? (
             <span className="hidden md:inline-flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)]">
-              <Loader2 className="w-3 h-3 animate-spin text-[#E5B45B]" />
+              <Loader2 className="w-3 h-3 motion-safe:animate-spin text-[#E5B45B]" />
               <span>Saving to MongoDB...</span>
             </span>
           ) : isDirty ? (
             <span className="hidden md:inline-flex items-center space-x-1.5 text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E5B45B] animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#E5B45B] motion-safe:animate-pulse" />
               <span>Unsaved Changes</span>
             </span>
           ) : workflowId ? (
@@ -242,7 +242,7 @@ export default function EditorToolbar({
             aria-label="Duplicate workflow"
           >
             {isDuplicating ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E5B45B]" />
+              <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin text-[#E5B45B]" />
             ) : (
               <Copy className="w-3.5 h-3.5" />
             )}
@@ -265,7 +265,7 @@ export default function EditorToolbar({
           title={workflowId ? 'Update workflow in database' : 'Save workflow to database'}
         >
           {isSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin text-current" />
+            <Loader2 className="w-4 h-4 motion-safe:animate-spin text-current" />
           ) : (
             <Save className={`w-4 h-4 ${isDirty ? 'text-[#0B0D0C]' : 'text-[#E5B45B]'}`} />
           )}
@@ -285,7 +285,7 @@ export default function EditorToolbar({
           title={workflowId ? 'Execute workflow with foundation engine' : 'Save workflow first to execute'}
         >
           {isRunning ? (
-            <Loader2 className="w-4 h-4 animate-spin text-current" />
+            <Loader2 className="w-4 h-4 motion-safe:animate-spin text-current" />
           ) : (
             <Play className="w-4 h-4 fill-current" />
           )}

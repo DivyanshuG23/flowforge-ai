@@ -86,7 +86,7 @@ export default function TopNav({
         {/* Backend health status pill */}
         <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#151715] border border-[rgba(185,176,160,0.12)] text-xs text-[#B9B0A0]">
           <span className="flex h-2 w-2 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
+            <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
           </span>
           <span className="text-[#F5F0E6] font-medium text-xs">Engine Online</span>

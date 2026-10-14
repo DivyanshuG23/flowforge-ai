@@ -269,7 +269,7 @@ export default function Executions() {
                 disabled={isLoading}
                 className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-[#151715] hover:bg-[#1a1d1a] border border-[rgba(185,176,160,0.15)] text-xs font-semibold text-[#F5F0E6] transition-all disabled:opacity-50"
               >
-                <RefreshCw className={`w-3.5 h-3.5 text-[#E5B45B] ${isLoading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 text-[#E5B45B] ${isLoading ? 'motion-safe:animate-spin' : ''}`} />
                 <span>Refresh</span>
               </button>
 
@@ -360,7 +360,7 @@ export default function Executions() {
                     }`}
                   >
                     <span>{tab.label}</span>
-                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[rgba(185,176,160,0.1)] font-mono">
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[rgba(185,176,160,0.1)] font-mono">
                       {tab.count}
                     </span>
                   </button>
@@ -375,7 +375,7 @@ export default function Executions() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Filter by workflow or ID..."
-                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] text-[#F5F0E6] placeholder-[#B9B0A0]/50 focus:outline-none focus:border-[#E5B45B]"
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] text-[#F5F0E6] placeholder-[#B9B0A0]/50 focus:outline-none focus:border-[#E5B45B] focus:ring-1 focus:ring-[#E5B45B]/30 transition-all"
                 />
               </div>
             </div>
@@ -391,7 +391,7 @@ export default function Executions() {
             {/* Executions Table */}
             {isLoading ? (
               <div className="py-16 text-center space-y-3">
-                <RefreshCw className="w-6 h-6 text-[#E5B45B] animate-spin mx-auto" />
+                <RefreshCw className="w-6 h-6 text-[#E5B45B] motion-safe:animate-spin mx-auto" />
                 <p className="text-xs text-[#B9B0A0]">Retrieving execution telemetry...</p>
               </div>
             ) : filteredExecutions.length === 0 ? (
@@ -659,7 +659,7 @@ export default function Executions() {
             <div className="p-5 space-y-4 overflow-y-auto flex-1">
               {isLoadingDetail ? (
                 <div className="py-12 text-center space-y-2">
-                  <RefreshCw className="w-6 h-6 text-[#E5B45B] animate-spin mx-auto" />
+                  <RefreshCw className="w-6 h-6 text-[#E5B45B] motion-safe:animate-spin mx-auto" />
                   <p className="text-xs text-[#B9B0A0]">Loading execution telemetry trace...</p>
                 </div>
               ) : detailError ? (

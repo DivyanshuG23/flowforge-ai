@@ -136,7 +136,7 @@ export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }
                     </div>
 
                     <div className="flex items-center space-x-1">
-                      <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.2 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
+                      <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
                         {item.badge}
                       </span>
                       <GripVertical className="w-3.5 h-3.5 text-[#B9B0A0]/40 group-hover:text-[#E5B45B] transition-colors" />

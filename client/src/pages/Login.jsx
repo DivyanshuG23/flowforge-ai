@@ -234,7 +234,7 @@ export default function Login() {
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin text-[#0B0D0C]" />
+                  <Loader2 className="w-4 h-4 motion-safe:animate-spin text-[#0B0D0C]" />
                   <span>Signing in...</span>
                 </>
               ) : (

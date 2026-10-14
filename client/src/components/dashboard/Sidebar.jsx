@@ -183,7 +183,7 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
                     {user?.name || user?.email || 'User'}
                   </p>
                   <div className="flex items-center space-x-1.5 mt-0.5">
-                    <span className="text-[10px] uppercase font-bold px-1.5 py-0.2 rounded bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)]">
+                    <span className="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)]">
                       {user?.role || 'user'}
                     </span>
                     <span className="text-[10px] text-[#B9B0A0] truncate">

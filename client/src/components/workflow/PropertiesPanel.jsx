@@ -269,7 +269,7 @@ export default function PropertiesPanel({
                   <div className="space-y-1 pt-1.5 border-t border-[rgba(185,176,160,0.06)]">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-[#059669]">Parsed Structured Output</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-[#059669]/15 text-[#059669] font-mono font-bold border border-[#059669]/30">
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#059669]/15 text-[#059669] font-mono font-bold border border-[#059669]/30">
                         JSON
                       </span>
                     </div>

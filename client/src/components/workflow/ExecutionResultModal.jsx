@@ -94,7 +94,7 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
           {failoverStep && isSuccess && (
             <div className="p-3.5 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] shadow-glow-gold flex items-center justify-between text-xs text-[#E5B45B]">
               <div className="flex items-center space-x-2.5">
-                <Sparkles className="w-4 h-4 text-[#E5B45B] animate-pulse flex-shrink-0" />
+                <Sparkles className="w-4 h-4 text-[#E5B45B] motion-safe:animate-pulse flex-shrink-0" />
                 <div>
                   <span className="font-bold block text-[#F5F0E6]">
                     Automatic Multi-Provider Failover Triggered

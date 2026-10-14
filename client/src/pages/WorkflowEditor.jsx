@@ -739,7 +739,7 @@ function WorkflowEditorContent() {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0B0D0C] text-[#F5F0E6] select-none">
         <div className="flex flex-col items-center space-y-4 p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.14)] shadow-2xl">
-          <Loader2 className="w-8 h-8 animate-spin text-[#E5B45B]" />
+          <Loader2 className="w-8 h-8 motion-safe:animate-spin text-[#E5B45B]" />
           <div className="text-center">
             <p className="text-sm font-bold text-[#F5F0E6]">Loading Pipeline Canvas</p>
             <p className="text-xs text-[#B9B0A0] mt-1">Retrieving workflow configuration from database...</p>

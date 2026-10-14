@@ -197,7 +197,7 @@ export default function Settings() {
 
             <div className="flex items-center space-x-2">
               <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#059669]/10 text-[#059669] border border-[#059669]/20 text-xs font-semibold">
-                <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-[#059669] motion-safe:animate-pulse" />
                 <span>Tenant Isolated</span>
               </span>
             </div>
@@ -265,7 +265,7 @@ export default function Settings() {
                       disabled={isSavingProfile}
                       className="px-3.5 py-2 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] font-bold text-xs transition-colors flex items-center space-x-1"
                     >
-                      {isSavingProfile ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                      {isSavingProfile ? <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                       <span>Save</span>
                     </button>
                     <button
@@ -454,7 +454,7 @@ export default function Settings() {
                   className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.3)] text-xs sm:text-sm font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-glow-gold"
                 >
                   {isUpdatingPassword ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-current" />
+                    <Loader2 className="w-4 h-4 motion-safe:animate-spin text-current" />
                   ) : (
                     <Lock className="w-4 h-4" />
                   )}
@@ -487,7 +487,7 @@ export default function Settings() {
                 className="p-1.5 rounded-lg bg-[#0B0D0C] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.12)] transition-colors text-xs flex items-center space-x-1.5"
                 title="Refresh diagnostics"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingHealth ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingHealth ? 'motion-safe:animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
             </div>
@@ -500,7 +500,7 @@ export default function Settings() {
                   <Server className="w-3.5 h-3.5 text-[#059669]" />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#059669] animate-pulse" />
+                  <span className="w-2.5 h-2.5 rounded-full bg-[#059669] motion-safe:animate-pulse" />
                   <span className="text-sm font-bold text-[#F5F0E6]">
                     {healthData?.success ? 'Operational (200 OK)' : 'Checking...'}
                   </span>

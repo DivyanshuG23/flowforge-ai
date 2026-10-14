@@ -24,7 +24,8 @@ import {
   ArrowUpRight, 
   Sliders, 
   CornerDownRight, 
-  Eye
+  Eye,
+  Network
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -132,6 +133,51 @@ export default function Home() {
             <span>Complete Execution Telemetry</span>
           </span>
         </div>
+
+        {/* Architecture Highlights Ribbon */}
+        <div className="pt-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 rounded-2xl bg-[#151715]/80 border border-[rgba(185,176,160,0.12)] shadow-xl backdrop-blur-sm text-left">
+            <div className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5 hover:border-[rgba(229,180,91,0.25)] transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] flex-shrink-0 mt-0.5">
+                <Network className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-mono text-[#E5B45B] font-bold block uppercase tracking-wider">Topological DAG</span>
+                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Kahn dependency sort &amp; cycle safety</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5 hover:border-[rgba(229,180,91,0.25)] transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] flex-shrink-0 mt-0.5">
+                <Sparkles className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-mono text-[#E5B45B] font-bold block uppercase tracking-wider">4-Provider Failover</span>
+                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Gemini, Groq, OpenAI &amp; Mistral</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5 hover:border-[rgba(229,180,91,0.25)] transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] flex-shrink-0 mt-0.5">
+                <GitBranch className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-mono text-[#E5B45B] font-bold block uppercase tracking-wider">Deterministic Rules</span>
+                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Multi-datatype boolean &amp; regex paths</span>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2.5 hover:border-[rgba(5,150,105,0.3)] transition-colors">
+              <div className="w-8 h-8 rounded-lg bg-[#059669]/15 border border-[#059669]/30 flex items-center justify-center text-[#059669] flex-shrink-0 mt-0.5">
+                <Activity className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-[11px] font-mono text-[#059669] font-bold block uppercase tracking-wider">Step Telemetry</span>
+                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Sub-second timing &amp; token counters</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ========================================================= */}
@@ -186,7 +232,7 @@ export default function Home() {
                   : 'bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] shadow-glow-gold'
               } disabled:opacity-50`}
             >
-              <Play className={`w-3.5 h-3.5 ${simulating ? 'animate-pulse' : ''}`} />
+              <Play className={`w-3.5 h-3.5 ${simulating ? 'motion-safe:animate-pulse' : ''}`} />
               <span>
                 {simulating
                   ? 'Executing Pipeline...'
@@ -224,15 +270,40 @@ export default function Home() {
           {/* Canvas Content: Visual DAG View vs Telemetry View */}
           {activeTab === 'canvas' ? (
             <div className="p-6 sm:p-10 relative bg-[radial-gradient(#1e211e_1px,transparent_1px)] [background-size:16px_16px]">
+              {/* Pipeline State Breadcrumb Header */}
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-xs">
+                <div className="flex items-center space-x-2.5">
+                  <span className="w-2 h-2 rounded-full bg-[#E5B45B] motion-safe:animate-pulse" />
+                  <span className="font-mono text-[#B9B0A0] text-[11px] uppercase tracking-wider">Pipeline State:</span>
+                  <span className={`font-semibold ${simulating ? 'text-[#E5B45B] motion-safe:animate-pulse' : simStep === 4 ? 'text-[#059669]' : 'text-[#F5F0E6]'}`}>
+                    {simStep === 0 && 'Ready to execute'}
+                    {simStep === 1 && 'Step 1/4: Ingesting Webhook Payload...'}
+                    {simStep === 2 && 'Step 2/4: Gemini LLM Anomaly Reasoning...'}
+                    {simStep === 3 && 'Step 3/4: Condition Rule Evaluated (TRUE)...'}
+                    {simStep === 4 && 'Step 4/4: Dispatched to Active Branch (Done)'}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-[11px] font-mono text-[#B9B0A0]/70">
+                  <span className="px-2 py-0.5 rounded bg-[#151715] border border-[rgba(185,176,160,0.1)]">DAG: Kahn Topological</span>
+                  <span className="px-2 py-0.5 rounded bg-[#151715] border border-[rgba(185,176,160,0.1)]">User Isolated</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
                 {/* Node 1: Trigger */}
                 <div
-                  className={`p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
+                  className={`relative p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
                     simStep >= 1
                       ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
                       : 'border-[rgba(185,176,160,0.15)]'
                   }`}
                 >
+                  {/* Visual Node Source Handle (Right) */}
+                  <div
+                    className="hidden lg:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#E5B45B] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="Source Handle"
+                  />
+
                   <div className="flex items-center justify-between pb-2 border-b border-[rgba(185,176,160,0.08)]">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[#B9B0A0]">
                       Node 1 • Entrypoint
@@ -263,7 +334,7 @@ export default function Home() {
 
                 {/* Node 2: AI Anomaly Reasoning */}
                 <div
-                  className={`p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
+                  className={`relative p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
                     simStep >= 2
                       ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
                       : simStep === 1
@@ -271,6 +342,17 @@ export default function Home() {
                       : 'border-[rgba(185,176,160,0.15)]'
                   }`}
                 >
+                  {/* Visual Node Target Handle (Left) */}
+                  <div
+                    className="hidden lg:block absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#E5B45B] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="Target Handle"
+                  />
+                  {/* Visual Node Source Handle (Right) */}
+                  <div
+                    className="hidden lg:block absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#E5B45B] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="Source Handle"
+                  />
+
                   <div className="flex items-center justify-between pb-2 border-b border-[rgba(185,176,160,0.08)]">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[#E5B45B]">
                       Node 2 • Gemini AI
@@ -280,7 +362,7 @@ export default function Home() {
                         simStep >= 2
                           ? 'bg-[#059669]/15 text-[#059669]'
                           : simStep === 1
-                          ? 'bg-[#252419] text-[#E5B45B] animate-pulse'
+                          ? 'bg-[#252419] text-[#E5B45B] motion-safe:animate-pulse'
                           : 'bg-[#151715] text-[#B9B0A0]'
                       }`}
                     >
@@ -303,12 +385,28 @@ export default function Home() {
 
                 {/* Node 3: Condition Evaluator */}
                 <div
-                  className={`p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
+                  className={`relative p-4 rounded-2xl bg-[#0B0D0C] border transition-all duration-300 ${
                     simStep >= 3
                       ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
                       : 'border-[rgba(185,176,160,0.15)]'
                   }`}
                 >
+                  {/* Visual Node Target Handle (Left) */}
+                  <div
+                    className="hidden lg:block absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#E5B45B] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="Target Handle"
+                  />
+                  {/* Visual Node True Source Handle (Right Top) */}
+                  <div
+                    className="hidden lg:block absolute -right-1.5 top-[38%] -translate-y-1/2 w-3 h-3 rounded-full bg-[#059669] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="True Source Handle"
+                  />
+                  {/* Visual Node False Source Handle (Right Bottom) */}
+                  <div
+                    className="hidden lg:block absolute -right-1.5 top-[76%] -translate-y-1/2 w-3 h-3 rounded-full bg-[#C83C3C] border-2 border-[#0B0D0C] shadow-sm z-10"
+                    title="False Source Handle"
+                  />
+
                   <div className="flex items-center justify-between pb-2 border-b border-[rgba(185,176,160,0.08)]">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-[#B9B0A0]">
                       Node 3 • Rule Engine
@@ -344,12 +442,18 @@ export default function Home() {
                 <div className="space-y-3">
                   {/* Branch A: True Path */}
                   <div
-                    className={`p-3 rounded-xl bg-[#0B0D0C] border transition-all duration-300 ${
+                    className={`relative p-3 rounded-xl bg-[#0B0D0C] border transition-all duration-300 ${
                       simStep >= 4
                         ? 'border-[#059669] shadow-glow-emerald bg-[#059669]/5'
                         : 'border-[rgba(185,176,160,0.15)] opacity-60'
                     }`}
                   >
+                    {/* Visual Branch Target Handle (Left) */}
+                    <div
+                      className="hidden lg:block absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#059669] border-2 border-[#0B0D0C] shadow-sm z-10"
+                      title="Active Branch Target Handle"
+                    />
+
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#059669] font-bold flex items-center space-x-1">
                         <Check className="w-3 h-3" />
@@ -360,18 +464,24 @@ export default function Home() {
                       </span>
                     </div>
                     <h5 className="text-xs font-semibold text-[#F5F0E6] mt-1">
-                      Escalate to PagerDuty & Slack
+                      Escalate to PagerDuty &amp; Slack
                     </h5>
                   </div>
 
                   {/* Branch B: False Path (Skipped) */}
                   <div
-                    className={`p-3 rounded-xl bg-[#0B0D0C] border transition-all duration-300 ${
+                    className={`relative p-3 rounded-xl bg-[#0B0D0C] border transition-all duration-300 ${
                       simStep >= 4
                         ? 'border-[rgba(185,176,160,0.1)] opacity-35'
                         : 'border-[rgba(185,176,160,0.1)] opacity-60'
                     }`}
                   >
+                    {/* Visual Branch Target Handle (Left) */}
+                    <div
+                      className="hidden lg:block absolute -left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[#C83C3C]/60 border-2 border-[#0B0D0C] shadow-sm z-10"
+                      title="Skipped Branch Target Handle"
+                    />
+
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-mono text-[#B9B0A0]">
                         {simStep >= 4 ? 'SKIPPED (Branch False)' : 'ALTERNATIVE'}
@@ -626,7 +736,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative">
           {/* Step 1 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4 relative">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold/15 transition-all duration-300 space-y-4 relative">
             <span className="text-4xl sm:text-5xl font-extrabold text-[#E5B45B]/20 font-mono block">
               01
             </span>
@@ -647,7 +757,7 @@ export default function Home() {
           </div>
 
           {/* Step 2 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4 relative">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold/15 transition-all duration-300 space-y-4 relative">
             <span className="text-4xl sm:text-5xl font-extrabold text-[#E5B45B]/20 font-mono block">
               02
             </span>
@@ -668,7 +778,7 @@ export default function Home() {
           </div>
 
           {/* Step 3 */}
-          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4 relative">
+          <div className="p-6 sm:p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold/15 transition-all duration-300 space-y-4 relative">
             <span className="text-4xl sm:text-5xl font-extrabold text-[#E5B45B]/20 font-mono block">
               03
             </span>
@@ -709,7 +819,7 @@ export default function Home() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Use Case 1 */}
-          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4">
+          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-4">
             <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center">
               <AlertCircle className="w-5 h-5 text-[#C83C3C]" />
             </div>
@@ -725,7 +835,7 @@ export default function Home() {
           </div>
 
           {/* Use Case 2 */}
-          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4">
+          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-4">
             <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center">
               <Bot className="w-5 h-5 text-[#E5B45B]" />
             </div>
@@ -741,7 +851,7 @@ export default function Home() {
           </div>
 
           {/* Use Case 3 */}
-          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] space-y-4">
+          <div className="p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-4">
             <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center">
               <CheckCircle2 className="w-5 h-5 text-[#059669]" />
             </div>

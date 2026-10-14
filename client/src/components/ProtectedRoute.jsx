@@ -12,7 +12,7 @@ export default function ProtectedRoute({ children }) {
       <div className="min-h-screen bg-[#0B0D0C] flex flex-col items-center justify-center space-y-4 text-[#F5F0E6]">
         <div className="relative">
           <div className="w-12 h-12 rounded-2xl bg-[#151715] border border-[rgba(229,180,91,0.25)] shadow-glow-gold flex items-center justify-center">
-            <Loader2 className="w-6 h-6 animate-spin text-[#E5B45B]" />
+            <Loader2 className="w-6 h-6 motion-safe:animate-spin text-[#E5B45B]" />
           </div>
         </div>
         <p className="text-sm font-medium text-[#B9B0A0]">Verifying FlowForge AI session...</p>

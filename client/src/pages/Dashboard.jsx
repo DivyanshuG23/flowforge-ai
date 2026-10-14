@@ -22,7 +22,10 @@ import {
   RefreshCw,
   Check,
   X,
-  Search
+  Search,
+  Globe,
+  Shield,
+  GitBranch
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -52,6 +55,12 @@ const formatDate = (isoString) => {
   } catch {
     return 'Recently';
   }
+};
+
+const formatDuration = (ms) => {
+  if (typeof ms !== 'number' || isNaN(ms)) return '0ms';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
 };
 
 export default function Dashboard() {
@@ -260,8 +269,23 @@ export default function Dashboard() {
                 </h1>
 
                 <p className="text-sm sm:text-base text-[#B9B0A0] leading-relaxed">
-                  Automate your work, build intelligent workflows, and save hours with FlowForge AI.
+                  Orchestrate modular DAG pipelines, configure multi-provider AI failover, and inspect millisecond-level step telemetry across your workspace.
                 </p>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(185,176,160,0.15)] text-[11px] font-mono text-[#B9B0A0]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
+                    <span>Engine: Express + MongoDB</span>
+                  </span>
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(229,180,91,0.25)] text-[11px] font-mono text-[#E5B45B]">
+                    <Sparkles className="w-3 h-3 text-[#E5B45B]" />
+                    <span>Primary AI: gemini-2.5-flash</span>
+                  </span>
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(185,176,160,0.15)] text-[11px] font-mono text-[#B9B0A0]">
+                    <Shield className="w-3 h-3 text-[#B9B0A0]" />
+                    <span>Tenancy: Isolated Scope</span>
+                  </span>
+                </div>
               </div>
 
               {/* Primary Actions */}
@@ -414,7 +438,7 @@ export default function Dashboard() {
                   {[1, 2, 3].map((i) => (
                     <div
                       key={i}
-                      className="p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-center justify-between animate-pulse"
+                      className="p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] flex items-center justify-between motion-safe:animate-pulse"
                     >
                       <div className="flex items-center space-x-3.5">
                         <div className="w-9 h-9 rounded-lg bg-[#151715]" />
@@ -507,6 +531,10 @@ export default function Dashboard() {
                       const nodeCount = Array.isArray(wf.nodes) ? wf.nodes.length : 0;
                       const edgeCount = Array.isArray(wf.edges) ? wf.edges.length : 0;
                       const updatedDate = formatDate(wf.updatedAt || wf.createdAt);
+                      const isCronEnabled = Boolean(wf.schedule?.enabled);
+                      const isWebhookEnabled = Boolean(wf.webhook?.enabled);
+                      const hasAiNode = Array.isArray(wf.nodes) && wf.nodes.some(n => n.data?.type === 'ai' || n.type === 'ai');
+                      const hasConditionNode = Array.isArray(wf.nodes) && wf.nodes.some(n => n.data?.type === 'condition' || n.type === 'condition');
 
                       return (
                         <div
@@ -527,7 +555,40 @@ export default function Dashboard() {
                                   Saved
                                 </span>
                               </div>
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#B9B0A0] mt-1 font-mono">
+                              <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 text-xs text-[#B9B0A0] mt-1.5 font-mono">
+                                {/* Trigger Status */}
+                                {isCronEnabled ? (
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)] text-[10px]">
+                                    <Clock className="w-3 h-3 text-[#E5B45B]" />
+                                    <span>Cron: {wf.schedule?.cron || 'Active'}</span>
+                                  </span>
+                                ) : isWebhookEnabled ? (
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#059669]/15 text-[#059669] border border-[#059669]/25 text-[10px]">
+                                    <Globe className="w-3 h-3 text-[#059669]" />
+                                    <span>Webhook Active</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#151715] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)] text-[10px]">
+                                    <span>Manual Run</span>
+                                  </span>
+                                )}
+
+                                {/* Node Features */}
+                                {hasAiNode && (
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)] text-[10px]">
+                                    <Sparkles className="w-2.5 h-2.5 text-[#E5B45B]" />
+                                    <span>AI Reasoner</span>
+                                  </span>
+                                )}
+
+                                {hasConditionNode && (
+                                  <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded bg-[#151715] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)] text-[10px]">
+                                    <GitBranch className="w-2.5 h-2.5 text-[#B9B0A0]" />
+                                    <span>Branching</span>
+                                  </span>
+                                )}
+
+                                <span className="text-[rgba(185,176,160,0.25)]">•</span>
                                 <span>{nodeCount} {nodeCount === 1 ? 'node' : 'nodes'}</span>
                                 <span className="text-[rgba(185,176,160,0.25)]">•</span>
                                 <span>{edgeCount} {edgeCount === 1 ? 'connection' : 'connections'}</span>
@@ -558,7 +619,7 @@ export default function Dashboard() {
                               aria-label={`Duplicate ${wf.name}`}
                             >
                               {isDuplicatingId === wf._id ? (
-                                <Loader2 className="w-3.5 h-3.5 animate-spin text-[#E5B45B]" />
+                                <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin text-[#E5B45B]" />
                               ) : (
                                 <Copy className="w-3.5 h-3.5" />
                               )}
@@ -611,7 +672,7 @@ export default function Dashboard() {
                     Execution Telemetry:
                   </span>
                   <div className="flex items-center space-x-1.5 text-[11px] text-[#059669]">
-                    <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-[#059669] motion-safe:animate-pulse" />
                     <span>Telemetry Live</span>
                   </div>
                 </div>
@@ -639,7 +700,7 @@ export default function Dashboard() {
               {/* Real Recent Executions List or Empty State */}
               {isLoadingExecutions ? (
                 <div className="py-8 text-center space-y-2">
-                  <Loader2 className="w-5 h-5 text-[#E5B45B] animate-spin mx-auto" />
+                  <Loader2 className="w-5 h-5 text-[#E5B45B] motion-safe:animate-spin mx-auto" />
                   <p className="text-xs text-[#B9B0A0]">Loading telemetry logs...</p>
                 </div>
               ) : recentExecutions.length === 0 ? (
@@ -669,21 +730,41 @@ export default function Dashboard() {
                       const isSuccess = exec.status === 'succeeded';
                       const isFailed = exec.status === 'failed';
                       const isRunning = exec.status === 'running';
+                      const triggerSource = exec.triggerSource || 'manual';
+                      const stepsCount = Array.isArray(exec.nodeExecutions) ? exec.nodeExecutions.length : 0;
 
                       return (
                         <div
                           key={exec._id}
                           onClick={() => navigate(`/executions?id=${exec._id}`)}
-                          className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] hover:border-[rgba(229,180,91,0.25)] hover:bg-[#111311] transition-all cursor-pointer flex items-center justify-between group"
+                          className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.08)] hover:border-[rgba(229,180,91,0.3)] hover:bg-[#111311] hover:shadow-glow-gold/15 transition-all cursor-pointer flex items-center justify-between group"
                         >
-                          <div className="min-w-0 flex-1 pr-2">
-                            <span className="text-xs font-semibold text-[#F5F0E6] truncate block group-hover:text-[#E5B45B] transition-colors">
-                              {wfName}
-                            </span>
-                            <div className="flex items-center space-x-2 text-[10px] text-[#B9B0A0]/70 mt-0.5">
-                              <span className="font-mono">
-                                {exec.durationMs < 1000 ? `${exec.durationMs}ms` : `${(exec.durationMs / 1000).toFixed(2)}s`}
+                          <div className="min-w-0 flex-1 pr-3">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-xs font-semibold text-[#F5F0E6] truncate block group-hover:text-[#E5B45B] transition-colors">
+                                {wfName}
                               </span>
+                              {triggerSource === 'webhook' && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#059669]/15 text-[#059669] border border-[#059669]/25 flex-shrink-0">
+                                  webhook
+                                </span>
+                              )}
+                              {triggerSource === 'scheduled' && (
+                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)] flex-shrink-0">
+                                  scheduled
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2 text-[10px] text-[#B9B0A0]/70 mt-1 font-mono">
+                              <span className="text-[#F5F0E6]">
+                                {formatDuration(exec.durationMs)}
+                              </span>
+                              {stepsCount > 0 && (
+                                <>
+                                  <span>•</span>
+                                  <span>{stepsCount} {stepsCount === 1 ? 'step' : 'steps'}</span>
+                                </>
+                              )}
                               <span>•</span>
                               <span>{formatDate(exec.createdAt || exec.startedAt)}</span>
                             </div>
@@ -716,8 +797,17 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Action 1: Create Workflow */}
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Create Workflow"
                 onClick={() => navigate('/workflows/new')}
-                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-3"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    navigate('/workflows/new');
+                  }
+                }}
+                className="group cursor-pointer p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 space-y-3 focus:outline-none focus:ring-2 focus:ring-[#E5B45B]/40"
               >
                 <div className="flex items-center justify-between">
                   <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center group-hover:scale-105 transition-transform">
@@ -957,7 +1047,7 @@ export default function Dashboard() {
               >
                 {isDeletingId ? (
                   <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
                     <span>Deleting...</span>
                   </>
                 ) : (

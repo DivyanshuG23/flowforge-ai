@@ -42,7 +42,7 @@ export default function Footer() {
 
             <div className="pt-2 flex items-center space-x-2">
               <span className="flex h-2 w-2 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
+                <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
               </span>
               <span className="text-[11px] font-mono text-[#F5F0E6]">
