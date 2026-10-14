@@ -2,6 +2,11 @@ import { validateWorkflowGraph } from './graphValidator.js';
 import { executeApiRequestNode } from './httpExecutor.js';
 import { evaluateConditionNode } from './conditionEvaluator.js';
 import { executeAiRequest } from './aiExecutor.js';
+import {
+  buildWorkflowContext,
+  executeActionNode,
+  interpolateTemplate
+} from './templateInterpolator.js';
 
 /**
  * Foundation Workflow Execution Engine
@@ -17,7 +22,7 @@ const SUPPORTED_NODE_TYPES = new Set(['trigger', 'output', 'action', 'api', 'con
  * @param {Object} incomingInput - Aggregated data from parent nodes
  * @returns {Promise<{ success: boolean, output?: any, error?: string, requestTelemetry?: any }>}
  */
-const executeAiNode = async (node, incomingInput) => {
+const executeAiNode = async (node, incomingInput, options = {}, workflowContext = null) => {
   const nodeData = node.data || {};
 
   // Support deterministic non-billable demo fixtures for technical interview demonstrations (strictly opt-in)
@@ -109,9 +114,19 @@ const executeAiNode = async (node, incomingInput) => {
     prompt = nodeData.description.trim();
   }
 
+  // Dynamically interpolate template variables in prompt
+  if (workflowContext && prompt.includes('{{')) {
+    prompt = interpolateTemplate(prompt, workflowContext);
+  }
+
+  let systemPrompt = nodeData.systemPrompt;
+  if (workflowContext && typeof systemPrompt === 'string' && systemPrompt.includes('{{')) {
+    systemPrompt = interpolateTemplate(systemPrompt, workflowContext);
+  }
+
   const aiOptions = {
     prompt,
-    systemPrompt: nodeData.systemPrompt,
+    systemPrompt,
     model: nodeData.model,
     provider: nodeData.provider,
     temperature: nodeData.temperature,
@@ -163,7 +178,7 @@ const executeAiNode = async (node, incomingInput) => {
  * @param {Object} incomingInput - Aggregated data from parent nodes
  * @returns {Promise<{ success: boolean, output?: any, error?: string, requestTelemetry?: any }>}
  */
-const executeNodeSafely = async (node, incomingInput, options = {}) => {
+const executeNodeSafely = async (node, incomingInput, options = {}, workflowContext = null) => {
   const nodeType = node.data?.type || node.type || 'action';
 
   switch (nodeType) {
@@ -189,40 +204,41 @@ const executeNodeSafely = async (node, incomingInput, options = {}) => {
     }
 
     case 'action': {
-      // Deterministic passthrough transformation without eval or arbitrary code execution
-      return {
-        success: true,
-        output: {
-          operation: 'passthrough_transform',
-          processedAt: new Date().toISOString(),
-          data: incomingInput ?? { message: 'Initialized without upstream input' }
-        }
-      };
+      return executeActionNode(node, incomingInput, workflowContext);
     }
 
     case 'output': {
-      // Deterministic terminal output collection
+      // Deterministic terminal output collection with optional dynamic target formatting
+      const rawTarget = node.data?.target || 'HTTP 200 Response';
+      const target = (workflowContext ? interpolateTemplate(rawTarget, workflowContext) : rawTarget) ?? rawTarget;
+
+      let finalPayload = incomingInput ?? null;
+      if (node.data?.payloadTemplate || node.data?.mapping) {
+        const actionResult = executeActionNode(node, incomingInput, workflowContext);
+        finalPayload = actionResult.output?.data ?? incomingInput;
+      }
+
       return {
         success: true,
         output: {
           finalized: true,
           completedAt: new Date().toISOString(),
-          receivedInput: incomingInput ?? null,
-          target: node.data?.target || 'HTTP 200 Response'
+          receivedInput: finalPayload,
+          target
         }
       };
     }
 
     case 'ai': {
-      return await executeAiNode(node, incomingInput);
+      return await executeAiNode(node, incomingInput, options, workflowContext);
     }
 
     case 'api': {
-      return await executeApiRequestNode(node, incomingInput);
+      return await executeApiRequestNode(node, incomingInput, options, workflowContext);
     }
 
     case 'condition': {
-      return evaluateConditionNode(node, incomingInput);
+      return evaluateConditionNode(node, incomingInput, workflowContext);
     }
 
     default:
@@ -363,8 +379,17 @@ export const executeWorkflowPipeline = async (workflow, options = {}) => {
       }
     }
 
+    // Construct rich, prototype-safe workflow resolution context
+    const workflowContext = buildWorkflowContext({
+      nodes,
+      nodeOutputs,
+      currentNode: node,
+      incomingInput: aggregatedInput,
+      options
+    });
+
     // Execute node safely
-    const nodeResult = await executeNodeSafely(node, aggregatedInput, options);
+    const nodeResult = await executeNodeSafely(node, aggregatedInput, options, workflowContext);
     const nodeEndTime = new Date();
     const nodeDurationMs = nodeEndTime.getTime() - nodeStartTime.getTime();
 

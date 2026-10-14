@@ -105,6 +105,10 @@ function CustomNode({ data, selected, isConnectable }) {
       ? isFailoverRecovered
         ? `${data.provider || 'gemini'} ➔ ${runtimeOutput.provider} (${runtimeOutput.model || data.model})`
         : `${data.model || 'gemini-3.8-flash'} • ${data.outputFormat === 'json' ? 'JSON' : 'Text'}${data.prompt ? ` • ${data.prompt.slice(0, 18)}${data.prompt.length > 18 ? '...' : ''}` : ''}`
+      : nodeType === 'action' && data.operation
+      ? data.operation === 'transform' ? 'JSON Transformation' : data.operation === 'filter' ? 'Field Extraction' : 'Passthrough'
+      : nodeType === 'output' && data.target
+      ? data.target
       : data.description || config.defaultDesc;
 
   // Determine container styling based on runtime telemetry and selection

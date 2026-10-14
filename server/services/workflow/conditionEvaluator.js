@@ -72,9 +72,9 @@ export const getNestedProperty = (source, path) => {
   const cleanPath = path.trim();
   if (!cleanPath) return undefined;
 
-  // Split into tokens handling both dot and bracket syntax: a.b[0].c -> ['a', 'b', '0', 'c']
+  // Split into tokens handling both dot and bracket syntax: a.b[0].c, steps['node-ai'].output -> ['steps', 'node-ai', 'output']
   const rawTokens = cleanPath
-    .replace(/\[(\w+)\]/g, '.$1')
+    .replace(/\[['"]?([^'"\]]+)['"]?\]/g, '.$1')
     .split('.')
     .map((token) => token.trim())
     .filter(Boolean);
@@ -285,7 +285,7 @@ export const evaluateComparison = (actualValue, canonicalOperator, targetValue) 
  * @param {any} incomingInput - Aggregated outputs from upstream node(s)
  * @returns {{ success: boolean, result?: boolean, output?: Object, error?: string }}
  */
-export const evaluateConditionNode = (node, incomingInput) => {
+export const evaluateConditionNode = (node, incomingInput, workflowContext = null) => {
   if (!node || typeof node !== 'object') {
     return {
       success: false,
@@ -349,6 +349,11 @@ export const evaluateConditionNode = (node, incomingInput) => {
         }
       }
     }
+  }
+
+  // If still undefined, fallback to resolving from workflowContext if provided
+  if (actualValue === undefined && workflowContext && typeof workflowContext === 'object') {
+    actualValue = getNestedProperty(workflowContext, field);
   }
 
   // 5. Evaluate comparison

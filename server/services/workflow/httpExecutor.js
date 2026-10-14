@@ -1,4 +1,5 @@
 import { validateUrlForSsrf } from './ssrfValidator.js';
+import { interpolateTemplate, interpolateObject } from './templateInterpolator.js';
 
 const SUPPORTED_METHODS = new Set(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
 const DEFAULT_TIMEOUT_MS = 5000;
@@ -102,7 +103,7 @@ const readResponseBodySafely = async (response) => {
  * @param {any} incomingInput - Aggregated input from parent nodes
  * @returns {Promise<{ success: boolean, output?: any, error?: string, requestTelemetry?: any }>}
  */
-export const executeApiRequestNode = async (node, incomingInput) => {
+export const executeApiRequestNode = async (node, incomingInput, options = {}, workflowContext = null) => {
   const nodeData = node.data || {};
 
   // 1. Resolve and validate HTTP Method
@@ -115,14 +116,16 @@ export const executeApiRequestNode = async (node, incomingInput) => {
   }
   const method = rawMethod;
 
-  // 2. Resolve and validate target URL
-  const rawUrl = nodeData.url || nodeData.endpoint || nodeData.endpointUrl || '';
-  if (!rawUrl || typeof rawUrl !== 'string' || !rawUrl.trim()) {
+  // 2. Resolve and validate target URL with variable interpolation
+  const uninterpolatedUrl = nodeData.url || nodeData.endpoint || nodeData.endpointUrl || '';
+  if (!uninterpolatedUrl || typeof uninterpolatedUrl !== 'string' || !uninterpolatedUrl.trim()) {
     return {
       success: false,
       error: `API Request node "${node.id}" requires a valid destination URL.`
     };
   }
+
+  const rawUrl = workflowContext ? interpolateTemplate(uninterpolatedUrl, workflowContext) : uninterpolatedUrl;
 
   // 3. Resolve request timeout (clamped to safe min/max)
   const configuredTimeout = Number(nodeData.timeoutMs ?? nodeData.timeout ?? DEFAULT_TIMEOUT_MS);
@@ -131,7 +134,7 @@ export const executeApiRequestNode = async (node, incomingInput) => {
     MAX_TIMEOUT_MS
   );
 
-  // 4. Resolve headers
+  // 4. Resolve headers with variable interpolation
   let requestHeaders = {
     Accept: 'application/json, text/plain, */*'
   };
@@ -154,21 +157,34 @@ export const executeApiRequestNode = async (node, incomingInput) => {
     }
   }
 
+  if (workflowContext && requestHeaders) {
+    requestHeaders = interpolateObject(requestHeaders, workflowContext);
+  }
+
   // 5. Resolve body for applicable methods (POST, PUT, PATCH, DELETE)
   let requestBody = undefined;
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
     if (nodeData.body !== undefined && nodeData.body !== null && nodeData.body !== '') {
-      if (typeof nodeData.body === 'object') {
-        requestBody = JSON.stringify(nodeData.body);
+      let bodyData = nodeData.body;
+      if (workflowContext) {
+        if (typeof bodyData === 'string' && bodyData.includes('{{')) {
+          bodyData = interpolateTemplate(bodyData, workflowContext);
+        } else if (typeof bodyData === 'object') {
+          bodyData = interpolateObject(bodyData, workflowContext);
+        }
+      }
+
+      if (typeof bodyData === 'object') {
+        requestBody = JSON.stringify(bodyData);
         if (!requestHeaders['Content-Type'] && !requestHeaders['content-type']) {
           requestHeaders['Content-Type'] = 'application/json';
         }
-      } else if (typeof nodeData.body === 'string') {
-        requestBody = nodeData.body;
+      } else if (typeof bodyData === 'string') {
+        requestBody = bodyData;
         if (!requestHeaders['Content-Type'] && !requestHeaders['content-type']) {
           // Attempt JSON detection
           try {
-            JSON.parse(nodeData.body);
+            JSON.parse(bodyData);
             requestHeaders['Content-Type'] = 'application/json';
           } catch {
             requestHeaders['Content-Type'] = 'text/plain';
@@ -198,6 +214,8 @@ export const executeApiRequestNode = async (node, incomingInput) => {
   let redirectCount = 0;
   let finalResponse = null;
 
+  const fetchFn = options._fetchFn || nodeData._fetchFn || fetch;
+
   while (redirectCount <= MAX_REDIRECTS) {
     // SSRF Validation for current hop
     const ssrfCheck = await validateUrlForSsrf(currentUrl);
@@ -216,7 +234,7 @@ export const executeApiRequestNode = async (node, incomingInput) => {
     }, timeoutMs);
 
     try {
-      finalResponse = await fetch(currentUrl, {
+      finalResponse = await fetchFn(currentUrl, {
         method,
         headers: requestHeaders,
         body: requestBody,

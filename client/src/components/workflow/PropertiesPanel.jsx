@@ -999,9 +999,13 @@ export default function PropertiesPanel({
                   placeholder="e.g. Analyze incoming trace events for anomalies. Formulate recovery recommendation."
                   className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-2.5 text-xs text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B] resize-none leading-relaxed"
                 />
-                {!(selectedNode.data?.prompt || '').trim() && (
+                {!(selectedNode.data?.prompt || '').trim() ? (
                   <p className="text-[10px] text-[#E5B45B]/80 italic">
                     Prompt is required for LLM inference execution.
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-[#B9B0A0]/70 leading-relaxed">
+                    Supports dynamic <code className="text-[#E5B45B]">{"{{ upstream.field }}"}</code> tags (e.g. <code className="text-[#E5B45B]">{"{{ trigger.payload.service }}"}</code>).
                   </p>
                 )}
               </div>
@@ -1254,7 +1258,10 @@ export default function PropertiesPanel({
               </div>
 
               <div>
-                <label className="text-[11px] text-[#B9B0A0] block mb-1">Destination URL</label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] text-[#B9B0A0]">Destination URL</label>
+                  <span className="text-[9px] text-[#E5B45B] font-mono">{"{{ vars }}"}</span>
+                </div>
                 <input
                   type="url"
                   value={selectedNode.data?.url ?? selectedNode.data?.endpoint ?? ''}
@@ -1264,7 +1271,7 @@ export default function PropertiesPanel({
                       url: e.target.value
                     })
                   }
-                  placeholder="https://api.example.com/v1/data"
+                  placeholder="https://api.example.com/v1/tickets/{{ ticketId }}"
                   className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/40 focus:outline-none focus:border-[#E5B45B]"
                 />
               </div>
@@ -1284,7 +1291,7 @@ export default function PropertiesPanel({
                       headers: e.target.value
                     })
                   }
-                  placeholder='{"Content-Type": "application/json"}'
+                  placeholder='{"Authorization": "Bearer {{ trigger.payload.token }}"}'
                   className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-2 text-xs font-mono text-[#B9B0A0] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B] resize-none leading-snug"
                 />
               </div>
@@ -1305,7 +1312,7 @@ export default function PropertiesPanel({
                         body: e.target.value
                       })
                     }
-                    placeholder='{"key": "value"}'
+                    placeholder='{"ticket": "{{ trigger.payload.ticketId }}", "priority": "high"}'
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-2 text-xs font-mono text-[#B9B0A0] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B] resize-none leading-snug"
                   />
                 </div>
@@ -1314,27 +1321,138 @@ export default function PropertiesPanel({
           )}
 
           {nodeType === 'action' && (
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-[11px] text-[#B9B0A0] block mb-1">Operation Type</label>
-                <select className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#F5F0E6] focus:outline-none">
-                  <option>JSON Transformation / Mapping</option>
-                  <option>Custom JavaScript Evaluator</option>
-                  <option>Variable Assignment</option>
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-[#F5F0E6] block">
+                  Action Mode
+                </label>
+                <select
+                  value={selectedNode.data?.operation || 'transform'}
+                  onChange={(e) =>
+                    onUpdateNode(selectedNode.id, {
+                      ...selectedNode.data,
+                      operation: e.target.value
+                    })
+                  }
+                  className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#E5B45B] font-semibold focus:outline-none focus:border-[#E5B45B] transition-colors"
+                >
+                  <option value="transform">Dynamic JSON Transformation / Mapping</option>
+                  <option value="filter">Field Extraction / Filter Allowlist</option>
+                  <option value="passthrough">Passthrough / Transparent Pipe</option>
                 </select>
               </div>
+
+              {(selectedNode.data?.operation || 'transform') === 'transform' && (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-[#F5F0E6]">
+                      JSON Mapping Template
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const example = {
+                          ticketId: "{{ trigger.payload.ticketId }}",
+                          targetSystem: "{{ trigger.payload.service }}",
+                          priority: "{{ ai.structured.severity }}"
+                        };
+                        onUpdateNode(selectedNode.id, {
+                          ...selectedNode.data,
+                          mapping: example
+                        });
+                      }}
+                      className="text-[10px] text-[#E5B45B] hover:underline"
+                    >
+                      Insert Example
+                    </button>
+                  </div>
+                  <textarea
+                    rows={5}
+                    value={
+                      typeof selectedNode.data?.mapping === 'object'
+                        ? JSON.stringify(selectedNode.data.mapping, null, 2)
+                        : selectedNode.data?.mapping || ''
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let parsed = val;
+                      try {
+                        parsed = JSON.parse(val);
+                      } catch {
+                        parsed = val;
+                      }
+                      onUpdateNode(selectedNode.id, {
+                        ...selectedNode.data,
+                        mapping: parsed
+                      });
+                    }}
+                    placeholder={'{\n  "service": "{{ trigger.payload.service }}",\n  "severity": "{{ ai.structured.severity }}"\n}'}
+                    className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-2.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B] resize-none leading-relaxed"
+                  />
+                  <p className="text-[10px] text-[#B9B0A0]/70 leading-relaxed">
+                    Values support <code className="text-[#E5B45B]">{"{{ trigger.payload.* }}"}</code>, <code className="text-[#E5B45B]">{"{{ ai.structured.* }}"}</code>, and <code className="text-[#E5B45B]">{"{{ steps.<id>.output }}"}</code>.
+                  </p>
+                </div>
+              )}
+
+              {selectedNode.data?.operation === 'filter' && (
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-[#F5F0E6] block">
+                    Allowed Field Keys (Comma or newline separated)
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={
+                      Array.isArray(selectedNode.data?.selectedFields)
+                        ? selectedNode.data.selectedFields.join(', ')
+                        : selectedNode.data?.selectedFields || ''
+                    }
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const fields = raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+                      onUpdateNode(selectedNode.id, {
+                        ...selectedNode.data,
+                        selectedFields: fields
+                      });
+                    }}
+                    placeholder="service, status, priority, orderId"
+                    className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg p-2.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B] resize-none"
+                  />
+                  <p className="text-[10px] text-[#B9B0A0]/70">
+                    Only the specified keys are extracted and passed downstream; sensitive or excess fields are stripped.
+                  </p>
+                </div>
+              )}
+
+              {selectedNode.data?.operation === 'passthrough' && (
+                <div className="p-2.5 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)] text-[11px] text-[#B9B0A0]">
+                  Incoming data passes through transparently to downstream nodes without alteration.
+                </div>
+              )}
             </div>
           )}
 
           {nodeType === 'output' && (
-            <div className="space-y-2.5">
-              <div>
-                <label className="text-[11px] text-[#B9B0A0] block mb-1">Delivery Target</label>
-                <select className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#059669] focus:outline-none">
-                  <option>Return HTTP 200 Response</option>
-                  <option>Publish to Event Stream</option>
-                  <option>Log & Terminate Flow</option>
-                </select>
+            <div className="space-y-3.5">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold text-[#F5F0E6] block">
+                  Delivery Target / Channel
+                </label>
+                <input
+                  type="text"
+                  value={selectedNode.data?.target ?? 'HTTP 200 Response'}
+                  onChange={(e) =>
+                    onUpdateNode(selectedNode.id, {
+                      ...selectedNode.data,
+                      target: e.target.value
+                    })
+                  }
+                  placeholder="e.g. HTTP 200 Response or Slack Channel {{ targetSystem }}"
+                  className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#059669] font-medium placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#059669]"
+                />
+                <p className="text-[10px] text-[#B9B0A0]/70">
+                  Terminal destination identifier. Supports <code className="text-[#E5B45B]">{"{{ variable }}"}</code> interpolation.
+                </p>
               </div>
             </div>
           )}
