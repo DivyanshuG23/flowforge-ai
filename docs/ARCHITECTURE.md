@@ -61,7 +61,7 @@ flowchart TD
 
     subgraph Providers["External AI Inference Providers"]
         Gemini["Google Gemini (Primary)"]
-        Groq["Groq Llama 3.3 (Fallback 1)"]
+        Groq["Groq gpt-oss-20b (Fallback 1)"]
         OpenAI["OpenAI gpt-4o-mini (Fallback 2)"]
         Mistral["Mistral AI (Fallback 3)"]
 
@@ -155,7 +155,7 @@ flowchart TD
     Eval1 -- "Cascadeable (HTTP 404 / 429)" --> CheckP2{"GROQ_API_KEY Configured?"}
     
     CheckP2 -- "No" --> SkipP2["Record: Groq Skipped (Unconfigured Key)"] --> CheckP3{"OPENAI_API_KEY Configured?"}
-    CheckP2 -- "Yes" --> P2["Attempt 2: Groq (llama-3.3-70b-versatile)"]
+    CheckP2 -- "Yes" --> P2["Attempt 2: Groq (openai/gpt-oss-20b)"]
     
     P2 --> Eval2{"Attempt 2 Result"}
     Eval2 -- "HTTP 200 OK" --> Success
@@ -180,7 +180,7 @@ flowchart TD
 
 ### Provider Cascade Order
 1. **Google Gemini (Primary):** `gemini-2.5-flash` / `gemini-3.8-flash` (REST API).
-2. **Groq (Fallback 1):** `llama-3.3-70b-versatile` (OpenAI-compatible REST API).
+2. **Groq (Fallback 1):** `openai/gpt-oss-20b` (OpenAI-compatible REST API).
 3. **OpenAI (Fallback 2):** `gpt-4o-mini` (OpenAI Chat Completions API).
 4. **Mistral AI (Fallback 3):** `mistral-small-latest` (OpenAI-compatible REST API).
 
@@ -319,7 +319,7 @@ flowchart LR
    - Point out that `Routine Telemetry Logger` is visually marked **Skipped** with a muted border.
 4. **Inspect Failover Telemetry:**
    - In the Execution Result modal, point to the step telemetry card.
-   - If executed on a server where Gemini returns a model retirement notice (HTTP 404), point out how Groq recovered the pipeline, rendering the emerald `Success • Recovered` badge and the canvas subtitle update: `gemini ➔ groq (llama-3.3-70b-versatile)`.
+   - If executed on a server where Gemini returns a model retirement notice (HTTP 404), point out how Groq recovered the pipeline, rendering the emerald `Success • Recovered` badge and the canvas subtitle update: `gemini ➔ groq (openai/gpt-oss-20b)`.
    - Explain how credentials, file paths, and tokens are scrubbed from the diagnostic detail box.
 
 ---
