@@ -675,7 +675,7 @@ export default function PropertiesPanel({
                           onClick={() => {
                             const url = `${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}`;
                             const secretHeader = workflowWebhook.secret ? `-H "X-Webhook-Secret: ${workflowWebhook.secret}" ` : '';
-                            const curl = `curl -X POST "${url}" -H "Content-Type: application/json" ${secretHeader}-d '{"event":"test","timestamp":"${new Date().toISOString()}"}'`;
+                            const curl = `curl -X POST "${url}" -H "Content-Type: application/json" ${secretHeader}-d '{"event":"test","timestamp":"2026-10-14T12:00:00.000Z"}'`;
                             navigator.clipboard.writeText(curl);
                             setCopiedCurl(true);
                             setTimeout(() => setCopiedCurl(false), 2000);
@@ -687,7 +687,7 @@ export default function PropertiesPanel({
                         </button>
                       </div>
                       <pre className="p-2 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[10px] font-mono text-[#B9B0A0] overflow-x-auto whitespace-pre-wrap select-all">
-                        {`curl -X POST "${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}" \\\n  -H "Content-Type: application/json" ${workflowWebhook.secret ? `\\\n  -H "X-Webhook-Secret: ${workflowWebhook.secret}" ` : ''}\\\n  -d '{"event":"test","timestamp":"${new Date().toISOString()}"}'`}
+                        {`curl -X POST "${window.location.origin}/api/workflows/webhook/${workflowWebhook.token}" \\\n  -H "Content-Type: application/json" ${workflowWebhook.secret ? `\\\n  -H "X-Webhook-Secret: ${workflowWebhook.secret}" ` : ''}\\\n  -d '{"event":"test","timestamp":"2026-10-14T12:00:00.000Z"}'`}
                       </pre>
                     </div>
                   )}

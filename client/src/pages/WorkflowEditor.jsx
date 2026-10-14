@@ -724,7 +724,7 @@ function WorkflowEditorContent() {
     } finally {
       setIsRunning(false);
     }
-  }, [isRunning, workflowId, isDirty, workflowName, workflowDescription, nodes, edges, navigate]);
+  }, [isRunning, workflowId, isDirty, workflowName, workflowDescription, nodes, edges, workflowSchedule, workflowWebhook, navigate]);
 
   // Load starter pipeline if canvas is cleared
   const handleLoadStarter = () => {
