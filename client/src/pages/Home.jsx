@@ -78,7 +78,7 @@ export default function Home() {
         {/* Announcement Pill */}
         <div className="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-[#151715] border border-[rgba(229,180,91,0.3)] shadow-glow-gold text-[#E5B45B] text-xs font-semibold">
           <Sparkles className="w-3.5 h-3.5 text-[#E5B45B]" />
-          <span>Visual Workflow Automation • Powered by Gemini 3.5</span>
+          <span>Visual Workflow Automation • Multi-Provider AI Failover</span>
         </div>
 
         {/* Main Headline */}
@@ -95,7 +95,7 @@ export default function Home() {
         {/* Subtitle */}
         <p className="text-base sm:text-xl text-[#B9B0A0] max-w-3xl mx-auto leading-relaxed font-normal">
           Orchestrate visual automation pipelines combining modular trigger entry points, 
-          multi-model AI reasoning, deterministic conditional branching, and millisecond-level step telemetry.
+          outbound API requests, multi-model AI reasoning, deterministic conditional branching, and millisecond-level step telemetry.
         </p>
 
         {/* CTA Buttons */}
@@ -121,7 +121,7 @@ export default function Home() {
         <div className="pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-[#B9B0A0]/80">
           <span className="flex items-center space-x-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
-            <span>Verified Gemini 3.5 Flash Model</span>
+            <span>Verified Gemini &amp; Multi-Provider Support</span>
           </span>
           <span className="flex items-center space-x-1.5">
             <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
@@ -436,7 +436,7 @@ export default function Home() {
                     <tr>
                       <td className="py-3 px-3 text-[#B9B0A0]">02</td>
                       <td className="py-3 px-3 font-semibold text-[#F5F0E6]">Anomaly Triage</td>
-                      <td className="py-3 px-3 text-[#E5B45B]">ai (gemini-3.5)</td>
+                      <td className="py-3 px-3 text-[#E5B45B]">ai (gemini-2.5-flash)</td>
                       <td className="py-3 px-3 text-[#059669]">succeeded</td>
                       <td className="py-3 px-3">420ms</td>
                       <td className="py-3 px-3 text-[#059669]">anomalyDetected: true, riskLevel: "high"</td>
@@ -515,13 +515,13 @@ export default function Home() {
             <div className="w-10 h-10 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] flex items-center justify-center">
               <Bot className="w-5 h-5" />
             </div>
-            <h3 className="text-base font-bold text-[#F5F0E6]">Multi-Model AI Integration</h3>
+            <h3 className="text-base font-bold text-[#F5F0E6]">Multi-Provider AI Reasoning</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Powered by Google Gemini 2.5 Flash and custom OpenAI models. Ingests context variables, enforces structured JSON output, and computes token telemetry.
+              Powered by Google Gemini (gemini-2.5-flash &amp; gemini-3.8-flash) with optional automatic failover to Groq, OpenAI, or Mistral AI. Ingests context variables, enforces structured JSON output, and computes token telemetry.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#E5B45B] border border-[rgba(185,176,160,0.1)]">
-                gemini-2.5-flash
+                4-Provider Failover
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
                 Structured JSON
@@ -651,14 +651,14 @@ export default function Home() {
             <span className="text-4xl sm:text-5xl font-extrabold text-[#E5B45B]/20 font-mono block">
               02
             </span>
-            <h3 className="text-lg font-bold text-[#F5F0E6]">Configure AI & Logic Rules</h3>
+            <h3 className="text-lg font-bold text-[#F5F0E6]">Configure AI &amp; Logic Rules</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Define prompts with variable injection, choose Gemini 3.5 Flash or OpenAI models, and define Boolean, numerical, or regex comparison rules.
+              Define prompts with variable injection, choose Google Gemini, Groq, OpenAI, or Mistral AI models, and define Boolean, numerical, or regex comparison rules.
             </p>
             <ul className="space-y-1.5 pt-2 text-xs text-[#B9B0A0]">
               <li className="flex items-center space-x-2">
                 <Check className="w-3.5 h-3.5 text-[#E5B45B]" />
-                <span>Custom temperature & system prompts</span>
+                <span>Custom temperature &amp; system prompts</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Check className="w-3.5 h-3.5 text-[#E5B45B]" />
@@ -672,7 +672,7 @@ export default function Home() {
             <span className="text-4xl sm:text-5xl font-extrabold text-[#E5B45B]/20 font-mono block">
               03
             </span>
-            <h3 className="text-lg font-bold text-[#F5F0E6]">Execute & Track Telemetry</h3>
+            <h3 className="text-lg font-bold text-[#F5F0E6]">Execute &amp; Track Telemetry</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
               Run pipelines on demand. Inspect millisecond node durations, prompt tokens, completion tokens, and structured outputs in real-time logs.
             </p>
@@ -683,7 +683,7 @@ export default function Home() {
               </li>
               <li className="flex items-center space-x-2">
                 <Check className="w-3.5 h-3.5 text-[#059669]" />
-                <span>Historical run search & pagination</span>
+                <span>Historical run search &amp; pagination</span>
               </li>
             </ul>
           </div>
@@ -714,10 +714,10 @@ export default function Home() {
               <AlertCircle className="w-5 h-5 text-[#C83C3C]" />
             </div>
             <h3 className="text-base font-bold text-[#F5F0E6]">
-              Autonomous Incident Triage & Escalation
+              Autonomous Incident Triage &amp; Escalation
             </h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Ingest error payloads from monitoring gateways. Summarize stack traces with Gemini 3.5 Flash, evaluate priority score, and route high-severity alerts to on-call channels.
+              Ingest error payloads from monitoring gateways. Summarize stack traces with Google Gemini (with optional 4-provider failover recovery), evaluate priority scores, and route high-severity alerts to on-call channels.
             </p>
             <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] text-[11px] font-mono text-[#E5B45B]">
               Trigger → AI Analysis → Rule Check → Alert
@@ -779,19 +779,23 @@ export default function Home() {
           {[
             {
               q: "What is FlowForge AI and what problem does it solve?",
-              a: "FlowForge AI is a visual workflow automation platform designed for technical teams. It lets you visually orchestrate trigger entrypoints, LLM reasoning nodes, deterministic condition branches, and return responses on an interactive canvas, executing them against a secure Express and MongoDB Atlas backend with live step-by-step telemetry."
+              a: "FlowForge AI is a visual workflow automation platform designed for technical teams. It lets you visually orchestrate trigger entrypoints, LLM reasoning nodes, deterministic condition branches, external API calls, and return responses on an interactive canvas, executing them against a secure Express and MongoDB Atlas backend with live step-by-step telemetry."
             },
             {
               q: "What workflow nodes are currently implemented and supported?",
-              a: "The platform natively provides four core node types: Trigger nodes (entry point payloads), AI Processing nodes (LLM reasoning with Gemini & OpenAI), Condition nodes (deterministic Boolean, numerical, string containment, and regex rules with true/false path splitting), and Return Output nodes (HTTP response & state commitment)."
+              a: "The platform natively provides six core node types: Trigger nodes (webhook alert and scheduled entrypoints), AI Processing nodes (LLM reasoning across Gemini, Groq, OpenAI, and Mistral), Condition nodes (deterministic comparison rules with true/false path splitting), Action nodes (data passthrough and payload mapping), API Request nodes (outbound HTTP requests with SSRF guards), and Return Output nodes (HTTP response and state commitment)."
             },
             {
               q: "Which AI models and providers can I configure?",
-              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash model, providing sub-second inference with structured JSON formatting. It also supports custom OpenAI-compatible models (e.g. gpt-4o-mini), custom system prompts, temperature controls, and token consumption tracking."
+              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash and gemini-3.8-flash models, providing sub-second inference with structured JSON formatting. It also supports Groq (llama-3.3-70b-versatile), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
+            },
+            {
+              q: "How does automatic AI failover work, and what are its prerequisites?",
+              a: "Automatic failover is an opt-in toggle on each AI node. When enabled, if the primary model encounters a provider deprecation (HTTP 404) or rate limit (HTTP 429), the engine cascades sequentially to Groq, OpenAI, and Mistral within a single monotonic timeout budget. Providers without configured server environment keys (e.g. GROQ_API_KEY) are cleanly bypassed without halting the workflow, and full attempt telemetry is logged in the Visual Failover Cascade Viewer."
             },
             {
               q: "How does execution telemetry and history work?",
-              a: "Every workflow run records millisecond-accurate start/completion timestamps, node-level durations, prompt and completion token counts, input parameters, and formatted outputs. These traces are saved in MongoDB Atlas and available on the dedicated Executions dashboard with pagination and status filters."
+              a: "Every workflow run records millisecond-accurate start/completion timestamps, node-level durations, prompt and completion token counts, input parameters, formatted outputs, and failover attempt logs. These traces are saved in MongoDB Atlas and available on the dedicated Executions dashboard with pagination and status filters."
             },
             {
               q: "How is user data and pipeline security guaranteed?",
@@ -838,7 +842,7 @@ export default function Home() {
               Start Orchestrating Intelligent Workflows
             </h2>
             <p className="text-sm sm:text-base text-[#B9B0A0] leading-relaxed">
-              Design visual DAGs, configure fast Gemini 3.5 reasoning, and inspect real telemetry in under two minutes.
+              Design visual DAGs, configure resilient multi-provider AI reasoning, and inspect real telemetry in under two minutes.
             </p>
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -859,7 +863,7 @@ export default function Home() {
             </div>
 
             <p className="text-[11px] text-[#B9B0A0]/70 pt-2 font-mono">
-              Self-contained execution engine • MongoDB Atlas • Google Gemini API
+              Self-contained execution engine • MongoDB Atlas • Google Gemini • Groq • OpenAI • Mistral
             </p>
           </div>
         </div>

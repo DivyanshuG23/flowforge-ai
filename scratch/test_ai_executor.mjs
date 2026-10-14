@@ -60,7 +60,7 @@ function createOversizedStream(targetBytes) {
 // -------------------------------------------------------------
 console.log('--- 1. Secret Redaction & URL Sanitization Tests ---');
 
-const testGeminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=AIzaSyD_SECRET_KEY_1234567890';
+const testGeminiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=AIzaSyD_SECRET_KEY_1234567890';
 const sanitizedUrl = sanitizeUrl(testGeminiUrl);
 assert(!sanitizedUrl.includes('AIzaSyD_SECRET_KEY_1234567890'), 'Gemini key is removed from URL');
 assert(sanitizedUrl.includes('key=%5BREDACTED%5D') || sanitizedUrl.includes('key=[REDACTED]'), 'URL replaces key parameter with [REDACTED]');
@@ -196,7 +196,7 @@ const geminiResult = await executeAiRequest({
 assert(geminiResult.success === true, 'Gemini execution succeeds');
 assert(geminiResult.text === 'Analysis completed: System CPU spike resolved.', 'Extracts correct Gemini text');
 assert(geminiResult.provider === 'gemini', 'Reports gemini provider');
-assert(geminiResult.model === 'gemini-3.5-flash', 'Uses default gemini model');
+assert(geminiResult.model === 'gemini-3.8-flash', 'Uses default gemini model');
 assert(geminiResult.usage.promptTokens === 18, 'Extracts prompt tokens');
 assert(geminiResult.usage.completionTokens === 32, 'Extracts completion tokens');
 assert(geminiResult.usage.totalTokens === 50, 'Extracts total tokens');

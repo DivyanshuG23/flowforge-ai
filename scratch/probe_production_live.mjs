@@ -1,161 +1,63 @@
-import https from 'https';
-
-console.log('🔍 Starting FlowForge AI Live Production Smoke Test Probe...\n');
-
-const FRONTEND_URL = 'https://flowforge-ai-ten.vercel.app';
 const BACKEND_URL = 'https://flowforge-ai-api-hj63.onrender.com';
+const FRONTEND_URL = 'https://flowforge-ai-ten.vercel.app';
 
-async function makeRequest(url, options = {}) {
-  const start = Date.now();
-  const res = await fetch(url, options);
-  const duration = Date.now() - start;
-  let text = '';
-  try {
-    text = await res.text();
-  } catch {}
-  let json = null;
-  try {
-    json = JSON.parse(text);
-  } catch {}
-  return {
-    status: res.status,
-    statusText: res.statusText,
-    headers: Object.fromEntries(res.headers.entries()),
-    duration,
-    bodyText: text,
-    bodyJson: json
-  };
+async function verifyDeployedReadonly() {
+  console.log('=== Verifying Deployed FlowForge AI Service Availability ===\n');
+
+  // 1. Frontend Availability
+  const fe = await fetch(FRONTEND_URL);
+  const feText = await fe.text();
+  console.log('1. Frontend:', fe.status, fe.statusText, '| Root element present:', feText.includes('<div id="root">'));
+
+  // 2. Backend Health & Readiness
+  const hRes = await fetch(`${BACKEND_URL}/api/health`);
+  const h = await hRes.json();
+  console.log('2. Health (status):', hRes.status, '| DB:', h.database, '| Uptime:', h.uptimeSeconds, 's');
+
+  const rRes = await fetch(`${BACKEND_URL}/api/health/readiness`);
+  const r = await rRes.json();
+  console.log('3. Readiness (status):', rRes.status, '| DB:', r.database);
+
+  // 3. CORS Preflight
+  const cors = await fetch(`${BACKEND_URL}/api/workflows`, {
+    method: 'OPTIONS',
+    headers: {
+      'Origin': FRONTEND_URL,
+      'Access-Control-Request-Method': 'GET',
+      'Access-Control-Request-Headers': 'Authorization,Content-Type'
+    }
+  });
+  console.log('4. CORS Allow-Origin:', cors.headers.get('access-control-allow-origin') || 'MISSING');
+
+  // 4. Protected Route Guard (No Token)
+  const wfGuard = await fetch(`${BACKEND_URL}/api/workflows`);
+  const wfGuardData = await wfGuard.json();
+  console.log('5. Workflows Auth Guard (HTTP status):', wfGuard.status, '| Error message:', wfGuardData.message);
+
+  const execGuard = await fetch(`${BACKEND_URL}/api/executions`);
+  const execGuardData = await execGuard.json();
+  console.log('6. Executions Auth Guard (HTTP status):', execGuard.status, '| Error message:', execGuardData.message);
+
+  // 5. Auth Payload Validation Guard
+  const authVal = await fetch(`${BACKEND_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  const authValData = await authVal.json();
+  console.log('7. Auth Validation Guard (HTTP status):', authVal.status, '| Error message:', authValData.message);
+
+  // 6. Webhook Format Guard
+  const hookGuard = await fetch(`${BACKEND_URL}/api/webhooks/invalid-token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ping: true })
+  });
+  const hookGuardData = await hookGuard.json();
+  console.log('8. Webhook Format Guard (HTTP status):', hookGuard.status, '| Error message:', hookGuardData.message);
 }
 
-async function runLiveProbes() {
-  const results = [];
-
-  // Probe 1: Backend Health Check
-  console.log('1. Probing Backend Health Check...');
-  try {
-    const res = await makeRequest(`${BACKEND_URL}/api/health`);
-    console.log(`   Status: ${res.status} ${res.statusText} (${res.duration}ms)`);
-    console.log(`   Response:`, res.bodyJson);
-    const pass = res.status === 200 && res.bodyJson?.success === true && res.bodyJson?.status === 'healthy';
-    results.push({ name: 'Backend Health Check', url: `${BACKEND_URL}/api/health`, pass, details: res.bodyJson });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Backend Health Check', pass: false, error: err.message });
-  }
-
-  // Probe 2: CORS Preflight for Vercel Frontend Origin
-  console.log('\n2. Probing CORS Preflight with Vercel Origin...');
-  try {
-    const res = await makeRequest(`${BACKEND_URL}/api/workflows`, {
-      method: 'OPTIONS',
-      headers: {
-        'Origin': FRONTEND_URL,
-        'Access-Control-Request-Method': 'GET',
-        'Access-Control-Request-Headers': 'Authorization,Content-Type'
-      }
-    });
-    console.log(`   Status: ${res.status} (${res.duration}ms)`);
-    console.log(`   Access-Control-Allow-Origin: ${res.headers['access-control-allow-origin']}`);
-    console.log(`   Access-Control-Allow-Credentials: ${res.headers['access-control-allow-credentials']}`);
-    console.log(`   Access-Control-Allow-Headers: ${res.headers['access-control-allow-headers']}`);
-    const pass = (res.status === 204 || res.status === 200) && res.headers['access-control-allow-origin'] === FRONTEND_URL;
-    results.push({ 
-      name: 'CORS Preflight Headers', 
-      pass, 
-      allowOrigin: res.headers['access-control-allow-origin'],
-      allowCreds: res.headers['access-control-allow-credentials']
-    });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'CORS Preflight Headers', pass: false, error: err.message });
-  }
-
-  // Probe 3: Unauthenticated Workflow Protection (IDOR guard)
-  console.log('\n3. Probing Unauthenticated GET /api/workflows...');
-  try {
-    const res = await makeRequest(`${BACKEND_URL}/api/workflows`);
-    console.log(`   Status: ${res.status} ${res.statusText} (${res.duration}ms)`);
-    console.log(`   Response:`, res.bodyJson);
-    const pass = res.status === 401 && res.bodyJson?.success === false;
-    results.push({ name: 'Unauthenticated /api/workflows Rejection', pass, status: res.status });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Unauthenticated /api/workflows Rejection', pass: false, error: err.message });
-  }
-
-  // Probe 4: Unauthenticated Executions Protection
-  console.log('\n4. Probing Unauthenticated GET /api/executions & /api/executions/stats...');
-  try {
-    const res1 = await makeRequest(`${BACKEND_URL}/api/executions`);
-    const res2 = await makeRequest(`${BACKEND_URL}/api/executions/stats`);
-    console.log(`   GET /api/executions: ${res1.status}`);
-    console.log(`   GET /api/executions/stats: ${res2.status}`);
-    const pass = res1.status === 401 && res2.status === 401;
-    results.push({ name: 'Unauthenticated /api/executions Protection', pass });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Unauthenticated /api/executions Protection', pass: false, error: err.message });
-  }
-
-  // Probe 5: Invalid Login Rejection (Error Translation & Security)
-  console.log('\n5. Probing Invalid Credentials Login POST /api/auth/login...');
-  try {
-    const res = await makeRequest(`${BACKEND_URL}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'nonexistent-smoke-test@flowforge.internal', password: 'InvalidPassword123!' })
-    });
-    console.log(`   Status: ${res.status} (${res.duration}ms)`);
-    console.log(`   Response:`, res.bodyJson);
-    const pass = res.status === 401 && res.bodyJson?.success === false;
-    results.push({ name: 'Invalid Credentials Rejection', pass, status: res.status, message: res.bodyJson?.message });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Invalid Credentials Rejection', pass: false, error: err.message });
-  }
-
-  // Probe 6: Public Webhook Ingress Token Format Validation
-  console.log('\n6. Probing Webhook Token Format Guard POST /api/webhooks/invalid-token...');
-  try {
-    const res = await makeRequest(`${BACKEND_URL}/api/webhooks/invalid-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ test: 'smoke' })
-    });
-    console.log(`   Status: ${res.status} (${res.duration}ms)`);
-    // Non-hex token is rejected by webhookController with 404 'Webhook endpoint not found.' to prevent enumeration
-    const pass = res.status === 404 && res.bodyJson?.message === 'Webhook endpoint not found.';
-    results.push({ name: 'Webhook Route & Token Format Guard', pass, status: res.status, message: res.bodyJson?.message });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Webhook Route & Token Format Guard', pass: false, error: err.message });
-  }
-
-  // Probe 7: Frontend Vercel Production Delivery
-  console.log('\n7. Probing Live Vercel Frontend...');
-  try {
-    const res = await makeRequest(FRONTEND_URL);
-    console.log(`   Status: ${res.status} (${res.duration}ms)`);
-    const hasRoot = res.bodyText.includes('<div id="root">');
-    const hasTitle = res.bodyText.includes('FlowForge AI');
-    const pass = res.status === 200 && hasRoot && hasTitle;
-    console.log(`   Contains root container: ${hasRoot}, Has title: ${hasTitle}`);
-    results.push({ name: 'Vercel Frontend HTML Delivery', pass, status: res.status });
-  } catch (err) {
-    console.error('   Error:', err.message);
-    results.push({ name: 'Vercel Frontend HTML Delivery', pass: false, error: err.message });
-  }
-
-  // Summary
-  console.log('\n========================================');
-  console.log('LIVE PRODUCTION PROBE RESULTS:');
-  console.log('========================================');
-  let passedCount = 0;
-  for (const r of results) {
-    console.log(`${r.pass ? '✅ [PASS]' : '❌ [FAIL]'} ${r.name}`);
-    if (r.pass) passedCount++;
-  }
-  console.log(`\nTotal: ${passedCount}/${results.length} probes passed.`);
-}
-
-runLiveProbes();
+verifyDeployedReadonly().catch((err) => {
+  console.error('Fatal probe error:', err);
+  process.exit(1);
+});

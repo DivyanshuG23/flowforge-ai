@@ -20,6 +20,86 @@ const SUPPORTED_NODE_TYPES = new Set(['trigger', 'output', 'action', 'api', 'con
 const executeAiNode = async (node, incomingInput) => {
   const nodeData = node.data || {};
 
+  // Support deterministic non-billable demo fixtures for technical interview demonstrations (strictly opt-in)
+  const isExplicitFixture =
+    typeof nodeData.demoFixture === 'string'
+      ? ['high-severity', 'low-severity', 'failover-recovery'].includes(nodeData.demoFixture)
+      : typeof nodeData.demoFixture === 'object' && nodeData.demoFixture !== null;
+
+  if (isExplicitFixture) {
+    let fixture = nodeData.demoFixture;
+    if (fixture === 'high-severity') {
+      fixture = {
+        structured: {
+          severity: 'high',
+          reason: 'Database connection pool exhausted during transaction commit with 14.8% error rate',
+          recommendedAction: 'Trigger PagerDuty alert and scale database connection pool'
+        }
+      };
+    } else if (fixture === 'low-severity') {
+      fixture = {
+        structured: {
+          severity: 'low',
+          reason: 'Nominal operational telemetry within baseline thresholds',
+          recommendedAction: 'Archive incident telemetry to routine audit ledger'
+        }
+      };
+    } else if (fixture === 'failover-recovery') {
+      fixture = {
+        structured: {
+          severity: 'high',
+          reason: 'Groq fallback confirmed critical database pool exhaustion',
+          recommendedAction: 'Escalate to on-call infrastructure team'
+        },
+        provider: 'groq',
+        model: 'llama-3.3-70b-versatile',
+        failoverLog: [
+          {
+            provider: 'gemini',
+            model: 'gemini-2.5-flash',
+            status: 404,
+            error: 'AI model not found or unsupported by provider (HTTP 404). This model models/gemini-2.5-flash is no longer available to new users.',
+            durationMs: 420,
+            success: false,
+            retryable: false,
+            permanent: true
+          },
+          {
+            provider: 'groq',
+            model: 'llama-3.3-70b-versatile',
+            status: 200,
+            durationMs: 280,
+            success: true,
+            retryable: false,
+            permanent: false
+          }
+        ]
+      };
+    }
+
+    if (typeof fixture === 'object') {
+      const structuredOutput = fixture.structured ?? (typeof fixture === 'object' && !fixture.text ? fixture : null);
+      const textOutput = fixture.text || (structuredOutput ? JSON.stringify(structuredOutput, null, 2) : '');
+      return {
+        success: true,
+        output: {
+          text: textOutput,
+          structured: structuredOutput,
+          model: fixture.model || 'demo-fixture',
+          provider: fixture.provider || 'deterministic-fixture',
+          usage: { promptTokens: 35, completionTokens: 25, totalTokens: 60 },
+          durationMs: fixture.durationMs || 75,
+          failoverLog: fixture.failoverLog || null,
+          isDemoFixture: true,
+          ...(structuredOutput && typeof structuredOutput === 'object' && !Array.isArray(structuredOutput)
+            ? { data: structuredOutput }
+            : {})
+        },
+        requestTelemetry: { isDemoFixture: true, label: 'Deterministic Demo Fixture (Non-billable)' }
+      };
+    }
+  }
+
   let prompt = '';
   if (typeof nodeData.prompt === 'string' && nodeData.prompt.trim()) {
     prompt = nodeData.prompt.trim();

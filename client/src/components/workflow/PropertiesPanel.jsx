@@ -371,14 +371,66 @@ export default function PropertiesPanel({
 
               {/* Mode: Manual */}
               {((selectedNode.data?.triggerMode || (workflowSchedule?.enabled ? 'schedule' : workflowWebhook?.enabled ? 'webhook' : 'manual')) === 'manual') && (
-                <div className="p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)] space-y-2">
+                <div className="p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.1)] space-y-2.5">
                   <div className="flex items-center space-x-2 text-xs font-semibold text-[#F5F0E6]">
                     <Activity className="w-3.5 h-3.5 text-[#E5B45B]" />
-                    <span>Manual Execution</span>
+                    <span>Manual Ingestion Trigger</span>
                   </div>
                   <p className="text-[11px] text-[#B9B0A0] leading-relaxed">
-                    This workflow is triggered manually on-demand from the editor canvas or through the FlowForge dashboard. Downstream nodes receive an empty starting event payload.
+                    Triggered on-demand from the editor canvas or dashboard. Downstream nodes receive this starting event payload.
                   </p>
+
+                  {/* Incident Telemetry Presets & Payload Viewer */}
+                  {selectedNode.data?.payload && (
+                    <div className="space-y-1.5 pt-2 border-t border-[rgba(185,176,160,0.06)]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-[#E5B45B] uppercase tracking-wider font-semibold">
+                          Ingested Telemetry Payload
+                        </span>
+                        <div className="flex items-center space-x-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onUpdateNode(selectedNode.id, {
+                                ...selectedNode.data,
+                                payload: {
+                                  service: 'payment-gateway',
+                                  errorRatePercent: 14.8,
+                                  latencyP99Ms: 2450,
+                                  message: 'Database connection pool exhausted during transaction commit'
+                                }
+                              });
+                            }}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-[#C83C3C]/15 text-[#C83C3C] border border-[#C83C3C]/30 hover:bg-[#C83C3C]/25"
+                            title="Set high-severity incident payload"
+                          >
+                            High Alert
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              onUpdateNode(selectedNode.id, {
+                                ...selectedNode.data,
+                                payload: {
+                                  service: 'payment-gateway',
+                                  errorRatePercent: 0.1,
+                                  latencyP99Ms: 45,
+                                  message: 'Routine health check heartbeat ping'
+                                }
+                              });
+                            }}
+                            className="text-[9px] px-1.5 py-0.5 rounded bg-[#059669]/15 text-[#059669] border border-[#059669]/30 hover:bg-[#059669]/25"
+                            title="Set low-severity routine payload"
+                          >
+                            Routine
+                          </button>
+                        </div>
+                      </div>
+                      <pre className="p-2 rounded-lg bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] text-[10px] font-mono text-[#F5F0E6] overflow-x-auto max-h-32">
+                        {JSON.stringify(selectedNode.data.payload, null, 2)}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -794,7 +846,7 @@ export default function PropertiesPanel({
                   value={selectedNode.data?.provider || 'gemini'}
                   onChange={(e) => {
                     const newProvider = e.target.value;
-                    let newModel = 'gemini-2.5-flash';
+                    let newModel = 'gemini-3.8-flash';
                     if (newProvider === 'groq') newModel = 'llama-3.3-70b-versatile';
                     else if (newProvider === 'mistral') newModel = 'mistral-small-latest';
                     else if (newProvider === 'openai' || newProvider === 'openai-compatible') newModel = 'gpt-4o-mini';
@@ -828,7 +880,7 @@ export default function PropertiesPanel({
                       const defaultPreset =
                         selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
                         selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                        selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini';
+                        selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini';
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
                         _isCustomModel: !isCustom,
@@ -853,7 +905,7 @@ export default function PropertiesPanel({
                     placeholder={
                       selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     }
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B]"
                   />
@@ -862,7 +914,7 @@ export default function PropertiesPanel({
                     value={selectedNode.data?.model || (
                       selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     )}
                     onChange={(e) =>
                       onUpdateNode(selectedNode.id, {
@@ -874,10 +926,10 @@ export default function PropertiesPanel({
                   >
                     {selectedNode.data?.provider === 'gemini' && (
                       <>
-                        <option value="gemini-2.5-flash">gemini-2.5-flash (Fast &amp; Verified Stable)</option>
+                        <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended / Verified Active)</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Fast Stable / Existing Keys)</option>
                         <option value="gemini-flash-latest">gemini-flash-latest (Latest Release)</option>
-                        <option value="gemini-3.8-flash">gemini-3.8-flash (Reasoning / High Capability)</option>
-                        <option value="gemini-3.5-flash">gemini-3.5-flash (Legacy)</option>
+                        <option value="gemini-2.0-flash">gemini-2.0-flash (Verified Stable)</option>
                       </>
                     )}
                     {selectedNode.data?.provider === 'groq' && (
@@ -1113,6 +1165,39 @@ export default function PropertiesPanel({
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* Interview Demo / Deterministic Simulation Preset */}
+              <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#F5F0E6] flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-[#E5B45B]" />
+                    Interview Demo Mode (Deterministic)
+                  </span>
+                  {selectedNode.data?.demoFixture && (
+                    <span className="text-[9px] font-mono text-[#E5B45B] bg-[#252419] px-1.5 py-0.5 rounded border border-[#E5B45B]/30 font-bold">
+                      FIXTURE ACTIVE
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-[#B9B0A0]/70">
+                  Execute deterministically for interviews without external network latency or billable provider costs.
+                </p>
+                <select
+                  value={selectedNode.data?.demoFixture || ''}
+                  onChange={(e) =>
+                    onUpdateNode(selectedNode.id, {
+                      ...selectedNode.data,
+                      demoFixture: e.target.value || undefined
+                    })
+                  }
+                  className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#E5B45B] font-semibold focus:outline-none focus:border-[#E5B45B]"
+                >
+                  <option value="">Live Provider Inference (Gemini / Failover)</option>
+                  <option value="high-severity">Demo Fixture: High Severity Incident (Routes True)</option>
+                  <option value="low-severity">Demo Fixture: Low Severity Incident (Routes False)</option>
+                  <option value="failover-recovery">Demo Fixture: 404 Failover Recovery (Gemini &rarr; Groq)</option>
+                </select>
               </div>
 
               {/* Server-Side Credentials Security Notice */}

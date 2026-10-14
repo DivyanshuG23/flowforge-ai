@@ -46,7 +46,7 @@ export default function Footer() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
               </span>
               <span className="text-[11px] font-mono text-[#F5F0E6]">
-                Engine Online • Verified Gemini 3.5 Flash Active
+                Engine Online • Multi-Provider AI Active
               </span>
             </div>
           </div>

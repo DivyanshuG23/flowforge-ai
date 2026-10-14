@@ -4,15 +4,15 @@ export const BUILT_IN_TEMPLATES = [
     id: 'ai-incident-triage',
     name: 'AI Incident Triage & Smart Recovery',
     category: 'AI & Automation',
-    badge: 'Gemini AI',
+    badge: 'Multi-Provider AI',
     badgeColor: 'text-[#E5B45B] bg-[#E5B45B]/10 border-[#E5B45B]/20',
-    description: 'Ingests system incident telemetry, evaluates severity with Gemini 2.5 Flash, and branches critical incidents for priority escalation.',
+    description: 'Ingests system incident telemetry, evaluates severity with Google Gemini (with optional 4-provider failover to Groq, OpenAI, or Mistral), and branches critical alerts for priority escalation.',
     nodeCount: 6,
     edgeCount: 6,
-    flowPreview: ['Webhook Alert', 'Gemini 2.5 Flash', 'Severity Rule', 'Escalation Action', 'Commit Summary'],
+    flowPreview: ['Webhook Alert', 'AI Anomaly Triage', 'Severity Rule', 'Escalation Action', 'Resolution Output'],
     workflowData: {
       name: 'AI Incident Triage & Smart Recovery',
-      description: 'Ingests incident telemetry, uses Gemini 2.5 Flash for anomaly classification, and conditionally routes critical events.',
+      description: 'Ingests incident telemetry, uses Gemini for anomaly classification (with multi-provider failover), and conditionally routes critical events.',
       nodes: [
         {
           id: 'node-trigger-1',
@@ -21,7 +21,13 @@ export const BUILT_IN_TEMPLATES = [
           data: {
             type: 'trigger',
             label: 'Webhook Alert Ingestion',
-            description: 'Listens for system events and alert telemetry'
+            description: 'Listens for system events and alert telemetry',
+            payload: {
+              service: 'payment-gateway',
+              errorRatePercent: 14.8,
+              latencyP99Ms: 2450,
+              message: 'Database connection pool exhausted during transaction commit'
+            }
           }
         },
         {
@@ -30,9 +36,10 @@ export const BUILT_IN_TEMPLATES = [
           position: { x: 420, y: 180 },
           data: {
             type: 'ai',
-            label: 'Gemini Anomaly Classifier',
+            label: 'AI Incident Triage',
             provider: 'gemini',
-            model: 'gemini-2.5-flash',
+            model: 'gemini-3.8-flash',
+            enableFailover: true,
             prompt: 'Analyze the system incident payload and determine severity. Output JSON with fields: { severity: "high" | "low", reason: string, recommendedAction: string }.',
             systemPrompt: 'You are an autonomous SRE incident classifier assistant.',
             outputFormat: 'json',
@@ -48,7 +55,7 @@ export const BUILT_IN_TEMPLATES = [
           data: {
             type: 'condition',
             label: 'High Severity Branch',
-            field: 'steps.node-ai-1.output.severity',
+            field: 'structured.severity',
             operator: 'equals',
             value: 'high'
           }
@@ -115,7 +122,12 @@ export const BUILT_IN_TEMPLATES = [
           data: {
             type: 'trigger',
             label: 'Support Ticket Ingest',
-            description: 'Listens for customer inquiries and feedback submissions'
+            description: 'Listens for customer inquiries and feedback submissions',
+            payload: {
+              ticketId: 'TCK-8921',
+              customerEmail: 'alex@enterprise.org',
+              message: 'Our production database is experiencing connection timeouts and customer transactions are failing. We need urgent escalation.'
+            }
           }
         },
         {
@@ -142,7 +154,7 @@ export const BUILT_IN_TEMPLATES = [
           data: {
             type: 'condition',
             label: 'Negative Sentiment Filter',
-            field: 'steps.node-ai-sentiment.output.sentiment',
+            field: 'structured.sentiment',
             operator: 'equals',
             value: 'negative'
           }
@@ -295,7 +307,7 @@ export const BUILT_IN_TEMPLATES = [
           data: {
             type: 'condition',
             label: 'Verify HTTP 200',
-            field: 'steps.node-api-check.output.status',
+            field: 'status',
             operator: 'equals',
             value: 200
           }

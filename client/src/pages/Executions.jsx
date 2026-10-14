@@ -21,8 +21,10 @@ import {
   Copy,
   ChevronDown,
   ChevronUp,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
+import FailoverCascadeViewer from '../components/workflow/FailoverCascadeViewer';
 import { useAuth } from '../context/AuthContext';
 import {
   getUserExecutions,
@@ -472,6 +474,16 @@ export default function Executions() {
                                   : 'Queued'
                               }
                             />
+                            {Array.isArray(exec.nodeExecutions) && exec.nodeExecutions.some(
+                              (n) => Array.isArray(n.output?.failoverLog) && n.output.failoverLog.length > 1 && n.status === 'succeeded'
+                            ) && (
+                              <div className="mt-1">
+                                <span className="inline-flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E5B45B]/15 text-[#E5B45B] border border-[rgba(229,180,91,0.3)]">
+                                  <Sparkles className="w-2.5 h-2.5 text-[#E5B45B]" />
+                                  <span>Failover OK</span>
+                                </span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Trigger Source */}
@@ -760,8 +772,18 @@ export default function Executions() {
                               className="rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] overflow-hidden transition-all"
                             >
                               <div
+                                role="button"
+                                tabIndex={0}
+                                aria-expanded={isExpanded}
+                                aria-label={`Toggle step ${idx + 1} details`}
                                 onClick={() => toggleNodeExpand(idx)}
-                                className="p-3 flex items-center justify-between cursor-pointer hover:bg-[#151715] transition-colors"
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    toggleNodeExpand(idx);
+                                  }
+                                }}
+                                className="p-3 flex items-center justify-between cursor-pointer hover:bg-[#151715] transition-colors focus:outline-none focus:ring-1 focus:ring-[#E5B45B]/40"
                               >
                                 <div className="flex items-center space-x-2.5">
                                   <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#151715] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
@@ -773,6 +795,12 @@ export default function Executions() {
                                   <span className="text-[10px] uppercase font-mono text-[#B9B0A0]/60">
                                     ({step.nodeType})
                                   </span>
+                                  {Array.isArray(step.output?.failoverLog) && step.output.failoverLog.length > 1 && (
+                                    <span className="inline-flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E5B45B]/15 text-[#E5B45B] border border-[rgba(229,180,91,0.3)]">
+                                      <Sparkles className="w-2.5 h-2.5 text-[#E5B45B]" />
+                                      <span>Failover ({step.output.failoverLog.length})</span>
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center space-x-2.5">
@@ -805,7 +833,14 @@ export default function Executions() {
 
                               {/* Expanded Step Details */}
                               {isExpanded && (
-                                <div className="p-3 pt-0 border-t border-[rgba(185,176,160,0.06)] space-y-2 mt-2">
+                                <div className="p-3 pt-0 border-t border-[rgba(185,176,160,0.06)] space-y-3 mt-2">
+                                  {/* Failover Cascade Visualizer if failoverLog is present */}
+                                  {Array.isArray(step.output?.failoverLog) && step.output.failoverLog.length > 0 && (
+                                    <div className="pt-2">
+                                      <FailoverCascadeViewer failoverLog={step.output.failoverLog} />
+                                    </div>
+                                  )}
+
                                   {step.error && (
                                     <div className="p-2 rounded-lg bg-[#C83C3C]/10 border border-[#C83C3C]/30 text-[#C83C3C] text-[11px] font-mono">
                                       {step.error}

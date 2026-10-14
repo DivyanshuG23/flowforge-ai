@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   X, 
   CheckCircle2, 
@@ -12,6 +11,7 @@ import {
   GitBranch,
   ChevronRight
 } from 'lucide-react';
+import FailoverCascadeViewer from './FailoverCascadeViewer';
 
 const typeIcons = {
   trigger: Zap,
@@ -27,6 +27,11 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
 
   const isSuccess = execution?.status === 'succeeded';
   const nodeExecutions = execution?.nodeExecutions || [];
+
+  // Detect whether any AI node triggered multi-provider failover
+  const failoverStep = nodeExecutions.find(
+    (s) => Array.isArray(s.output?.failoverLog) && s.output.failoverLog.length > 1
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/80 backdrop-blur-sm animate-fade-in select-none">
@@ -85,6 +90,30 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
             </div>
           )}
 
+          {/* Top Failover Recovery Callout Banner if failover occurred */}
+          {failoverStep && isSuccess && (
+            <div className="p-3.5 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.3)] shadow-glow-gold flex items-center justify-between text-xs text-[#E5B45B]">
+              <div className="flex items-center space-x-2.5">
+                <Sparkles className="w-4 h-4 text-[#E5B45B] animate-pulse flex-shrink-0" />
+                <div>
+                  <span className="font-bold block text-[#F5F0E6]">
+                    Automatic Multi-Provider Failover Triggered
+                  </span>
+                  <span className="text-[11px] text-[#B9B0A0]">
+                    AI node encountered upstream outage/deprecation and automatically recovered via{' '}
+                    <strong className="text-[#059669]">
+                      {failoverStep.output?.provider?.toUpperCase() || 'FALLBACK PROVIDER'}
+                    </strong>
+                    .
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] font-mono text-[#E5B45B] bg-[#151715] px-2.5 py-1 rounded-md border border-[rgba(229,180,91,0.25)] flex-shrink-0">
+                {failoverStep.output.failoverLog.length} Cascade Attempts
+              </span>
+            </div>
+          )}
+
           {/* Node Step Telemetry */}
           <div className="space-y-2">
             <h4 className="text-xs font-bold uppercase tracking-wider text-[#B9B0A0]">
@@ -96,16 +125,17 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
                 No step traces available. Graph validation halted execution before node dispatch.
               </p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {nodeExecutions.map((step, idx) => {
                   const Icon = typeIcons[step.nodeType] || Activity;
                   const stepSuccess = step.status === 'succeeded';
                   const stepFailed = step.status === 'failed';
+                  const failoverLog = step.output?.failoverLog || null;
 
                   return (
                     <div
                       key={step.nodeId || idx}
-                      className="p-3 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] flex flex-col space-y-2"
+                      className="p-3.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] flex flex-col space-y-2.5"
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2.5">
@@ -140,17 +170,50 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
                         </div>
                       </div>
 
+                      {/* Failover Cascade Visualizer for steps with failoverLog */}
+                      {Array.isArray(failoverLog) && failoverLog.length > 0 && (
+                        <div className="mt-1">
+                          <FailoverCascadeViewer failoverLog={failoverLog} />
+                        </div>
+                      )}
+
                       {/* Error explanation if failed */}
                       {step.error && (
-                        <div className="text-[11px] text-[#C83C3C] bg-[#C83C3C]/5 border border-[#C83C3C]/20 p-2 rounded-lg font-mono">
+                        <div className="text-[11px] text-[#C83C3C] bg-[#C83C3C]/5 border border-[#C83C3C]/20 p-2.5 rounded-lg font-mono">
                           {step.error}
                         </div>
                       )}
 
                       {/* Output preview if succeeded */}
                       {step.output && (
-                        <div className="text-[10px] text-[#B9B0A0] bg-[#151715] p-2 rounded-lg font-mono truncate">
-                          Output: {JSON.stringify(step.output)}
+                        <div className="text-[10px] text-[#B9B0A0] bg-[#151715] p-2.5 rounded-lg font-mono space-y-1.5">
+                          {step.output.text && (
+                            <div className="text-[#F5F0E6] font-sans text-xs">
+                              <span className="text-[10px] font-mono text-[#B9B0A0] uppercase block mb-0.5">
+                                AI Response Preview:
+                              </span>
+                              <p className="line-clamp-3 bg-[#0B0D0C] p-2 rounded border border-[rgba(185,176,160,0.08)]">
+                                {step.output.text}
+                              </p>
+                            </div>
+                          )}
+
+                          {step.output.structured && (
+                            <div>
+                              <span className="text-[10px] font-mono text-[#059669] uppercase block mb-0.5">
+                                Structured Data (JSON):
+                              </span>
+                              <pre className="text-[10px] text-[#059669] bg-[#0B0D0C] p-2 rounded border border-[rgba(185,176,160,0.08)] overflow-x-auto max-h-32">
+                                {JSON.stringify(step.output.structured, null, 2)}
+                              </pre>
+                            </div>
+                          )}
+
+                          {!step.output.text && !step.output.structured && !failoverLog && (
+                            <div className="truncate">
+                              Output: {JSON.stringify(step.output)}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

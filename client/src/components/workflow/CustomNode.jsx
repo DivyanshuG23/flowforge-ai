@@ -90,18 +90,22 @@ function CustomNode({ data, selected, isConnectable }) {
   const Icon = config.icon;
 
   const title = data.label || config.defaultTitle;
+  const runtimeStatus = data.runtimeStatus;
+  const runtimeDurationMs = data.runtimeDurationMs;
+  const runtimeError = data.runtimeError;
+  const runtimeOutput = data.runtimeOutput;
+  const isFailoverRecovered = Array.isArray(runtimeOutput?.failoverLog) && runtimeOutput.failoverLog.length > 1 && runtimeStatus === 'succeeded';
+
   const subtitle = 
     nodeType === 'api' && (data.url || data.endpoint)
       ? `${(data.method || 'GET').toUpperCase()} ${data.url || data.endpoint}`
       : nodeType === 'condition' && data.field
       ? `If ${data.field} ${data.operator || 'equals'}${data.value !== undefined && data.value !== '' ? ` "${data.value}"` : ''}`
       : nodeType === 'ai' && (data.model || data.prompt)
-      ? `${data.model || 'gemini-2.5-flash'} • ${data.outputFormat === 'json' ? 'JSON' : 'Text'}${data.prompt ? ` • ${data.prompt.slice(0, 20)}${data.prompt.length > 20 ? '...' : ''}` : ''}`
+      ? isFailoverRecovered
+        ? `${data.provider || 'gemini'} ➔ ${runtimeOutput.provider} (${runtimeOutput.model || data.model})`
+        : `${data.model || 'gemini-3.8-flash'} • ${data.outputFormat === 'json' ? 'JSON' : 'Text'}${data.prompt ? ` • ${data.prompt.slice(0, 18)}${data.prompt.length > 18 ? '...' : ''}` : ''}`
       : data.description || config.defaultDesc;
-
-  const runtimeStatus = data.runtimeStatus;
-  const runtimeDurationMs = data.runtimeDurationMs;
-  const runtimeError = data.runtimeError;
 
   // Determine container styling based on runtime telemetry and selection
   let containerBorderClass = `${config.borderDefault} hover:border-[rgba(229,180,91,0.4)] hover:shadow-card-dark`;
@@ -156,15 +160,27 @@ function CustomNode({ data, selected, isConnectable }) {
 
         {/* Runtime Status Badge */}
         {runtimeStatus === 'succeeded' ? (
-          <span className="flex items-center space-x-1 text-[10px] text-[#059669] font-bold bg-[#059669]/10 px-2 py-0.5 rounded-full border border-[#059669]/30">
-            <CheckCircle2 className="w-3 h-3 text-[#059669]" />
-            <span>Passed</span>
-            {runtimeDurationMs !== undefined && (
-              <span className="text-[9px] font-mono text-[#059669]/80 font-normal">
-                {runtimeDurationMs}ms
-              </span>
-            )}
-          </span>
+          isFailoverRecovered ? (
+            <span className="flex items-center space-x-1 text-[10px] text-[#059669] font-bold bg-[#059669]/10 px-2 py-0.5 rounded-full border border-[#059669]/30">
+              <Sparkles className="w-3 h-3 text-[#E5B45B]" />
+              <span>Failover OK</span>
+              {runtimeDurationMs !== undefined && (
+                <span className="text-[9px] font-mono text-[#059669]/80 font-normal">
+                  {runtimeDurationMs}ms
+                </span>
+              )}
+            </span>
+          ) : (
+            <span className="flex items-center space-x-1 text-[10px] text-[#059669] font-bold bg-[#059669]/10 px-2 py-0.5 rounded-full border border-[#059669]/30">
+              <CheckCircle2 className="w-3 h-3 text-[#059669]" />
+              <span>Passed</span>
+              {runtimeDurationMs !== undefined && (
+                <span className="text-[9px] font-mono text-[#059669]/80 font-normal">
+                  {runtimeDurationMs}ms
+                </span>
+              )}
+            </span>
+          )
         ) : runtimeStatus === 'failed' ? (
           <span className="flex items-center space-x-1 text-[10px] text-[#C83C3C] font-bold bg-[#C83C3C]/10 px-2 py-0.5 rounded-full border border-[#C83C3C]/30 animate-pulse">
             <AlertCircle className="w-3 h-3 text-[#C83C3C]" />
