@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 /**
  * Authentication Rate Limiter
@@ -23,9 +23,25 @@ export const authRateLimiter = rateLimit({
 });
 
 /**
+ * Resolves the rate limit key for execution requests:
+ * Prioritizes authenticated user ID; falls back to IPv4/IPv6-normalized client IP.
+ */
+export const executionKeyGenerator = (req) => {
+  return req.user?.id ? `user_${req.user.id}` : ipKeyGenerator(req.ip || '127.0.0.1');
+};
+
+/**
+ * Resolves the rate limit key for webhook requests:
+ * Prioritizes webhook route token; falls back to IPv4/IPv6-normalized client IP.
+ */
+export const webhookKeyGenerator = (req) => {
+  return req.params?.token ? `hook_${req.params.token}` : ipKeyGenerator(req.ip || '127.0.0.1');
+};
+
+/**
  * Workflow Execution Rate Limiter
  * Protects workflow execution against denial of service, resource saturation, and AI API quota exhaustion.
- * Keyed by authenticated user ID (with fallback to client IP).
+ * Keyed by authenticated user ID (with fallback to client IP normalized for IPv4 and IPv6).
  */
 export const executionRateLimiter = rateLimit({
   windowMs: parseInt(process.env.EXECUTION_RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000, // 1 minute
@@ -33,10 +49,7 @@ export const executionRateLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: true,
   skip: () => process.env.NODE_ENV === 'test' && process.env.ENABLE_TEST_RATE_LIMIT !== 'true',
-  validate: { keyGeneratorIpFallback: false },
-  keyGenerator: (req) => {
-    return req.user?.id ? `user_${req.user.id}` : (req.ip || 'unknown');
-  },
+  keyGenerator: executionKeyGenerator,
   handler: (req, res) => {
     const identifier = req.user?.id ? `user: ${req.user.id}` : `IP: ${req.ip}`;
     console.warn(`[RateLimit] Execution rate limit exceeded for ${identifier} on workflow: ${req.params?.id || 'unknown'}`);
@@ -50,7 +63,7 @@ export const executionRateLimiter = rateLimit({
 /**
  * Webhook Trigger Rate Limiter
  * Protects public webhook ingestion endpoints against volumetric flooding and replay bursts.
- * Keyed by webhook token and client IP.
+ * Keyed by webhook token and client IP normalized for IPv4 and IPv6.
  */
 export const webhookRateLimiter = rateLimit({
   windowMs: parseInt(process.env.WEBHOOK_RATE_LIMIT_WINDOW_MS, 10) || 60 * 1000, // 1 minute
@@ -58,9 +71,7 @@ export const webhookRateLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: true,
   skip: () => process.env.NODE_ENV === 'test' && process.env.ENABLE_TEST_RATE_LIMIT !== 'true',
-  keyGenerator: (req) => {
-    return req.params?.token ? `hook_${req.params.token}` : (req.ip || 'unknown');
-  },
+  keyGenerator: webhookKeyGenerator,
   handler: (req, res) => {
     console.warn(`[RateLimit] Webhook rate limit exceeded for IP: ${req.ip}`);
     res.status(429).json({
@@ -77,10 +88,14 @@ export const resetRateLimits = (ip) => {
   const targets = [ip, '127.0.0.1', '::1', '::ffff:127.0.0.1'].filter(Boolean);
   for (const t of targets) {
     try {
+      const normalizedKey = ipKeyGenerator(t);
       authRateLimiter.resetKey?.(t);
+      authRateLimiter.resetKey?.(normalizedKey);
       executionRateLimiter.resetKey?.(t);
+      executionRateLimiter.resetKey?.(normalizedKey);
       executionRateLimiter.resetKey?.(`user_${t}`);
       webhookRateLimiter.resetKey?.(t);
+      webhookRateLimiter.resetKey?.(normalizedKey);
     } catch {}
   }
 };
