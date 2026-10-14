@@ -24,7 +24,7 @@ export const MIN_TIMEOUT_MS = 1000; // 1 second
 export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 
 export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.8-flash';
-export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'llama-3.3-70b-versatile';
+export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'openai/gpt-oss-20b';
 export const DEFAULT_OPENAI_MODEL = process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
 export const DEFAULT_MISTRAL_MODEL = process.env.MISTRAL_DEFAULT_MODEL || 'mistral-small-latest';
 export const DEFAULT_TEMPERATURE = 0.2;
@@ -837,6 +837,18 @@ const executeOpenAiRequest = async (config, options) => {
   };
 
   if (config.outputFormat === 'json') {
+    // OpenAI and Groq APIs mandate that the word 'json' appear in messages when response_format is json_object
+    const hasJsonDirective = messages.some((m) => /\bjson\b/i.test(m.content));
+    if (!hasJsonDirective) {
+      if (messages.length > 0 && messages[0].role === 'system') {
+        messages[0].content += '\nRespond strictly with a valid JSON object.';
+      } else {
+        messages.unshift({
+          role: 'system',
+          content: 'You must respond strictly with a valid JSON object.'
+        });
+      }
+    }
     payload.response_format = { type: 'json_object' };
   }
 

@@ -52,7 +52,7 @@ const executeAiNode = async (node, incomingInput) => {
           recommendedAction: 'Escalate to on-call infrastructure team'
         },
         provider: 'groq',
-        model: 'llama-3.3-70b-versatile',
+        model: 'openai/gpt-oss-20b',
         failoverLog: [
           {
             provider: 'gemini',
@@ -66,7 +66,7 @@ const executeAiNode = async (node, incomingInput) => {
           },
           {
             provider: 'groq',
-            model: 'llama-3.3-70b-versatile',
+            model: 'openai/gpt-oss-20b',
             status: 200,
             durationMs: 280,
             success: true,

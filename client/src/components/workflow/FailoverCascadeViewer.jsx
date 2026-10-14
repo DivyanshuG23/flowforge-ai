@@ -22,7 +22,7 @@ const PROVIDER_METADATA = {
   groq: {
     displayName: 'Groq',
     badgeClass: 'text-[#059669] bg-[#059669]/15 border-[#059669]/30',
-    defaultModel: 'llama-3.3-70b-versatile',
+    defaultModel: 'openai/gpt-oss-20b',
   },
   openai: {
     displayName: 'OpenAI',

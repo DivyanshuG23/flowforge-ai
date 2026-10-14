@@ -787,7 +787,7 @@ export default function Home() {
             },
             {
               q: "Which AI models and providers can I configure?",
-              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash and gemini-3.8-flash models, providing sub-second inference with structured JSON formatting. It also supports Groq (llama-3.3-70b-versatile), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
+              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash and gemini-3.8-flash models, providing sub-second inference with structured JSON formatting. It also supports Groq (openai/gpt-oss-20b), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
             },
             {
               q: "How does automatic AI failover work, and what are its prerequisites?",

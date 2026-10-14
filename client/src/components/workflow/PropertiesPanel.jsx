@@ -847,7 +847,7 @@ export default function PropertiesPanel({
                   onChange={(e) => {
                     const newProvider = e.target.value;
                     let newModel = 'gemini-3.8-flash';
-                    if (newProvider === 'groq') newModel = 'llama-3.3-70b-versatile';
+                    if (newProvider === 'groq') newModel = 'openai/gpt-oss-20b';
                     else if (newProvider === 'mistral') newModel = 'mistral-small-latest';
                     else if (newProvider === 'openai' || newProvider === 'openai-compatible') newModel = 'gpt-4o-mini';
 
@@ -860,7 +860,7 @@ export default function PropertiesPanel({
                   className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs text-[#E5B45B] font-semibold focus:outline-none focus:border-[#E5B45B] transition-colors"
                 >
                   <option value="gemini">Google Gemini (REST API)</option>
-                  <option value="groq">Groq (Llama 3.3 / Mixtral)</option>
+                  <option value="groq">Groq (GPT-OSS / Ultra-Fast LPU)</option>
                   <option value="openai">OpenAI (Chat Completions)</option>
                   <option value="mistral">Mistral AI (Mistral Small / Large)</option>
                   <option value="openai-compatible">OpenAI-Compatible Gateway</option>
@@ -878,7 +878,7 @@ export default function PropertiesPanel({
                     onClick={() => {
                       const isCustom = !!selectedNode.data?._isCustomModel;
                       const defaultPreset =
-                        selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                        selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                         selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
                         selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini';
                       onUpdateNode(selectedNode.id, {
@@ -903,7 +903,7 @@ export default function PropertiesPanel({
                       })
                     }
                     placeholder={
-                      selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                      selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
                       selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     }
@@ -912,7 +912,7 @@ export default function PropertiesPanel({
                 ) : (
                   <select
                     value={selectedNode.data?.model || (
-                      selectedNode.data?.provider === 'groq' ? 'llama-3.3-70b-versatile' :
+                      selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
                       selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     )}
@@ -934,9 +934,9 @@ export default function PropertiesPanel({
                     )}
                     {selectedNode.data?.provider === 'groq' && (
                       <>
-                        <option value="llama-3.3-70b-versatile">llama-3.3-70b-versatile (Flagship Llama 3.3 128k)</option>
-                        <option value="llama-3.1-8b-instant">llama-3.1-8b-instant (Sub-100ms Ultra-Fast)</option>
-                        <option value="mixtral-8x7b-32768">mixtral-8x7b-32768 (MoE Architecture)</option>
+                        <option value="openai/gpt-oss-20b">openai/gpt-oss-20b (Ultra-Fast 1000 tps / Free-tier Default)</option>
+                        <option value="openai/gpt-oss-120b">openai/gpt-oss-120b (Flagship Reasoning 120B)</option>
+                        <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Multimodal Reasoning 27B)</option>
                       </>
                     )}
                     {selectedNode.data?.provider === 'mistral' && (
