@@ -10,7 +10,9 @@ import {
   duplicateWorkflow,
   getWorkflowTriggers,
   updateWorkflowSchedule,
-  updateWorkflowWebhook
+  updateWorkflowWebhook,
+  getWorkflowTemplates,
+  createWorkflowFromTemplate
 } from '../controllers/workflowController.js';
 import {
   executeWorkflow,
@@ -29,6 +31,11 @@ router.use(authMiddleware);
 router.route('/')
   .post(createWorkflow)
   .get(getWorkflows);
+
+// Workflow Templates & Blueprints (must be registered before /:id)
+router.get('/templates', getWorkflowTemplates);
+router.post('/from-template', createWorkflowFromTemplate);
+router.post('/from-template/:templateId', createWorkflowFromTemplate);
 
 router.route('/:id')
   .get(getWorkflowById)

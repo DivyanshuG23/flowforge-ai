@@ -207,10 +207,12 @@ await itAsync('Sanitizes runtime telemetry and credentials from node data when d
   assert.strictEqual(createdNodes[1].data.runtimeStatus, undefined);
   assert.strictEqual(createdNodes[1].data.runtimeError, undefined);
 
-  // Verify edges copied safely
+  // Verify edges copied safely with remapped identifiers
   assert.strictEqual(createdPayload.edges.length, 1);
-  assert.strictEqual(createdPayload.edges[0].source, 'node-trigger-1');
-  assert.strictEqual(createdPayload.edges[0].target, 'node-ai-1');
+  assert.strictEqual(createdPayload.nodes[0].id !== 'node-trigger-1', true);
+  assert.strictEqual(createdPayload.nodes[1].id !== 'node-ai-1', true);
+  assert.strictEqual(createdPayload.edges[0].source, createdPayload.nodes[0].id);
+  assert.strictEqual(createdPayload.edges[0].target, createdPayload.nodes[1].id);
 });
 
 await itAsync('Truncates duplicate name safely to 100 characters max', async () => {

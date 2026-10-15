@@ -8,6 +8,7 @@ import {
   getScheduleStatus
 } from '../services/workflow/schedulerService.js';
 import { generateWebhookToken } from './webhookController.js';
+import { BUILT_IN_TEMPLATES } from '../data/templatesData.js';
 
 /**
  * Validates array of React Flow nodes
@@ -519,10 +520,18 @@ export const duplicateWorkflow = async (req, res) => {
       });
     }
 
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+    }
+
     // Strict ownership enforcement
     const sourceWorkflow = await Workflow.findOne({
       _id: id,
-      user: req.user.id
+      user: userId
     });
 
     if (!sourceWorkflow) {
@@ -532,11 +541,27 @@ export const duplicateWorkflow = async (req, res) => {
       });
     }
 
-    // Sanitize nodes: strip runtime telemetry and transient execution state
+    // Map old node IDs to newly generated unique node IDs for referential integrity
+    const nodeIdMap = new Map();
+
+    // Sanitize nodes: strip runtime telemetry and transient execution state, remap IDs
     const sourceNodes = Array.isArray(sourceWorkflow.nodes) ? sourceWorkflow.nodes : [];
-    const sanitizedNodes = sourceNodes.map((node) => {
+    const sanitizedNodes = sourceNodes.map((node, index) => {
       const raw = node.toObject ? node.toObject() : { ...node };
-      const { id: nodeId, type, position, measured, selected, data = {} } = raw;
+      const { id: oldNodeId, type, position, measured, selected, data = {} } = raw;
+
+      // Extract node type for semantic, readable node IDs (e.g. node_trigger_...)
+      const nodeType = (typeof data?.type === 'string' && data.type.trim())
+        ? data.type.trim()
+        : (typeof type === 'string' && type.trim() && type !== 'custom' ? type.trim() : 'node');
+
+      const cleanType = nodeType.replace(/[^a-zA-Z0-9_-]/g, '');
+      const uniqueSuffix = `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}_${index}`;
+      const newNodeId = `node_${cleanType}_${uniqueSuffix}`;
+
+      if (oldNodeId) {
+        nodeIdMap.set(String(oldNodeId), newNodeId);
+      }
 
       // Filter out any runtime telemetry or execution engine attributes
       const {
@@ -550,8 +575,13 @@ export const duplicateWorkflow = async (req, res) => {
         ...cleanData
       } = data;
 
+      // Also ensure internal cleanData.id is updated if present
+      if (cleanData.id) {
+        cleanData.id = newNodeId;
+      }
+
       return {
-        id: nodeId,
+        id: newNodeId,
         type: type || 'custom',
         position: position ? { x: position.x || 0, y: position.y || 0 } : { x: 0, y: 0 },
         data: cleanData,
@@ -560,12 +590,12 @@ export const duplicateWorkflow = async (req, res) => {
       };
     });
 
-    // Sanitize edges: ensure clean connection clones
+    // Sanitize edges: ensure clean connection clones with remapped source and target identifiers
     const sourceEdges = Array.isArray(sourceWorkflow.edges) ? sourceWorkflow.edges : [];
-    const sanitizedEdges = sourceEdges.map((edge) => {
+    const sanitizedEdges = sourceEdges.map((edge, index) => {
       const raw = edge.toObject ? edge.toObject() : { ...edge };
       const {
-        id: edgeId,
+        id: oldEdgeId,
         source,
         target,
         sourceHandle,
@@ -575,10 +605,18 @@ export const duplicateWorkflow = async (req, res) => {
         data
       } = raw;
 
+      const newEdgeId = `edge_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}_${index}`;
+      const remappedSource = (source && nodeIdMap.has(String(source)))
+        ? nodeIdMap.get(String(source))
+        : source;
+      const remappedTarget = (target && nodeIdMap.has(String(target)))
+        ? nodeIdMap.get(String(target))
+        : target;
+
       return {
-        id: edgeId,
-        source,
-        target,
+        id: newEdgeId,
+        source: remappedSource,
+        target: remappedTarget,
         sourceHandle: sourceHandle || undefined,
         targetHandle: targetHandle || undefined,
         animated: animated !== undefined ? animated : true,
@@ -593,12 +631,35 @@ export const duplicateWorkflow = async (req, res) => {
       duplicateName = duplicateName.slice(0, 93).trim() + ' (Copy)';
     }
 
+    // Schedule: preserve cron & timezone configuration but disable to prevent duplicate automated executions
+    const duplicatedSchedule = sourceWorkflow.schedule ? {
+      enabled: false,
+      cron: sourceWorkflow.schedule.cron || '',
+      timezone: sourceWorkflow.schedule.timezone || 'UTC',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: null,
+      lockedUntil: null,
+      lockedBy: null
+    } : undefined;
+
+    // Webhook: generate a fresh unguessable token and disable by default for security isolation
+    const duplicatedWebhook = {
+      enabled: false,
+      token: generateWebhookToken(),
+      secret: typeof sourceWorkflow.webhook?.secret === 'string' ? sourceWorkflow.webhook.secret : '',
+      lastTriggeredAt: null,
+      totalTriggers: 0
+    };
+
     const duplicatedWorkflow = await Workflow.create({
       name: duplicateName,
       description: sourceWorkflow.description || '',
-      user: req.user.id,
+      user: userId,
       nodes: sanitizedNodes,
-      edges: sanitizedEdges
+      edges: sanitizedEdges,
+      ...(duplicatedSchedule ? { schedule: duplicatedSchedule } : {}),
+      webhook: duplicatedWebhook
     });
 
     return res.status(201).json({
@@ -610,6 +671,12 @@ export const duplicateWorkflow = async (req, res) => {
         description: duplicatedWorkflow.description,
         nodes: duplicatedWorkflow.nodes,
         edges: duplicatedWorkflow.edges,
+        schedule: duplicatedWorkflow.schedule,
+        webhook: {
+          enabled: duplicatedWorkflow.webhook?.enabled || false,
+          token: duplicatedWorkflow.webhook?.token,
+          hasSecret: Boolean(duplicatedWorkflow.webhook?.secret)
+        },
         createdAt: duplicatedWorkflow.createdAt,
         updatedAt: duplicatedWorkflow.updatedAt
       }
@@ -845,4 +912,248 @@ export const updateWorkflowWebhook = async (req, res) => {
     });
   }
 };
+
+/**
+ * @route   GET /api/workflows/templates
+ * @desc    Get all available built-in workflow blueprint templates
+ * @access  Private (JWT required)
+ */
+export const getWorkflowTemplates = async (req, res) => {
+  try {
+    const templates = BUILT_IN_TEMPLATES.map((tmpl) => ({
+      id: tmpl.id,
+      name: tmpl.name,
+      category: tmpl.category,
+      badge: tmpl.badge,
+      badgeColor: tmpl.badgeColor,
+      description: tmpl.description,
+      nodeCount: tmpl.nodeCount,
+      edgeCount: tmpl.edgeCount,
+      flowPreview: tmpl.flowPreview
+    }));
+
+    return res.status(200).json({
+      success: true,
+      count: templates.length,
+      templates
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve workflow blueprints.'
+    });
+  }
+};
+
+/**
+ * @route   POST /api/workflows/from-template
+ * @route   POST /api/workflows/from-template/:templateId
+ * @desc    Instantiate a new workflow from a built-in blueprint with remapped IDs and safe trigger configuration
+ * @access  Private (JWT required)
+ */
+export const createWorkflowFromTemplate = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required.'
+      });
+    }
+
+    const templateId = req.params?.templateId || req.body?.templateId;
+    let targetTemplate = null;
+
+    if (templateId) {
+      targetTemplate = BUILT_IN_TEMPLATES.find((t) => t.id === templateId);
+    }
+
+    // If templateId was provided but not found, and no custom template nodes are provided, return 404
+    if (templateId && !targetTemplate && (!Array.isArray(req.body?.nodes) || req.body.nodes.length === 0)) {
+      return res.status(404).json({
+        success: false,
+        message: `Template "${templateId}" not found or unavailable.`
+      });
+    }
+
+    // If neither templateId nor raw nodes provided, reject with 400
+    if (!targetTemplate && (!Array.isArray(req.body?.nodes) || req.body.nodes.length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'A valid templateId or template nodes payload is required.'
+      });
+    }
+
+    const templateData = targetTemplate?.workflowData || {
+      name: req.body?.name,
+      description: req.body?.description,
+      nodes: req.body?.nodes || [],
+      edges: req.body?.edges || []
+    };
+
+    // Calculate workflow name, respecting 100 char limit
+    let workflowName = (req.body?.name && typeof req.body.name === 'string' && req.body.name.trim())
+      ? req.body.name.trim()
+      : targetTemplate?.name
+        ? `${targetTemplate.name}`
+        : 'New Workflow from Blueprint';
+
+    if (workflowName.length > 100) {
+      workflowName = workflowName.slice(0, 100).trim();
+    }
+
+    const workflowDescription = (req.body?.description && typeof req.body.description === 'string')
+      ? req.body.description.trim()
+      : (targetTemplate?.description || templateData.description || '');
+
+    // Map old node IDs to newly generated unique node IDs for referential integrity
+    const nodeIdMap = new Map();
+
+    const rawNodes = Array.isArray(req.body?.nodes) && req.body.nodes.length > 0
+      ? req.body.nodes
+      : (templateData.nodes || []);
+    const rawEdges = Array.isArray(req.body?.edges) && req.body.edges.length > 0
+      ? req.body.edges
+      : (templateData.edges || []);
+
+    const sanitizedNodes = rawNodes.map((node, index) => {
+      const raw = node.toObject ? node.toObject() : JSON.parse(JSON.stringify(node));
+      const { id: oldNodeId, type, position, measured, selected, data = {} } = raw;
+
+      const nodeType = (typeof data?.type === 'string' && data.type.trim())
+        ? data.type.trim()
+        : (typeof type === 'string' && type.trim() && type !== 'custom' ? type.trim() : 'node');
+
+      const cleanType = nodeType.replace(/[^a-zA-Z0-9_-]/g, '');
+      const uniqueSuffix = `${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}_${index}`;
+      const newNodeId = `node_${cleanType}_${uniqueSuffix}`;
+
+      if (oldNodeId) {
+        nodeIdMap.set(String(oldNodeId), newNodeId);
+      }
+
+      // Filter out any runtime telemetry, previous execution records, or secrets
+      const {
+        runtimeStatus,
+        runtimeDurationMs,
+        runtimeError,
+        runtimeOutput,
+        runtimeInput,
+        lastExecutionId,
+        executionLogs,
+        ...cleanData
+      } = data;
+
+      if (cleanData.id) {
+        cleanData.id = newNodeId;
+      }
+
+      return {
+        id: newNodeId,
+        type: type || 'custom',
+        position: position ? { x: Number(position.x) || 0, y: Number(position.y) || 0 } : { x: 0, y: 0 },
+        data: cleanData,
+        measured: measured || undefined,
+        selected: false
+      };
+    });
+
+    const sanitizedEdges = rawEdges.map((edge, index) => {
+      const raw = edge.toObject ? edge.toObject() : JSON.parse(JSON.stringify(edge));
+      const {
+        id: oldEdgeId,
+        source,
+        target,
+        sourceHandle,
+        targetHandle,
+        animated,
+        style,
+        data
+      } = raw;
+
+      const newEdgeId = `edge_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 7)}_${index}`;
+      const remappedSource = (source && nodeIdMap.has(String(source)))
+        ? nodeIdMap.get(String(source))
+        : source;
+      const remappedTarget = (target && nodeIdMap.has(String(target)))
+        ? nodeIdMap.get(String(target))
+        : target;
+
+      return {
+        id: newEdgeId,
+        source: remappedSource,
+        target: remappedTarget,
+        sourceHandle: sourceHandle || undefined,
+        targetHandle: targetHandle || undefined,
+        animated: animated !== undefined ? animated : true,
+        style: style || undefined,
+        data: data || undefined
+      };
+    });
+
+    // Triggers start safely disabled
+    const validatedSchedule = {
+      enabled: false,
+      cron: req.body?.schedule?.cron || templateData.schedule?.cron || '',
+      timezone: req.body?.schedule?.timezone || templateData.schedule?.timezone || 'UTC',
+      lastRunAt: null,
+      nextRunAt: null,
+      lastStatus: null,
+      lockedUntil: null,
+      lockedBy: null
+    };
+
+    const validatedWebhook = {
+      enabled: false,
+      token: generateWebhookToken(),
+      secret: '',
+      lastTriggeredAt: null,
+      totalTriggers: 0
+    };
+
+    const createdWorkflow = await Workflow.create({
+      name: workflowName,
+      description: workflowDescription,
+      user: userId,
+      nodes: sanitizedNodes,
+      edges: sanitizedEdges,
+      schedule: validatedSchedule,
+      webhook: validatedWebhook
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Workflow created from blueprint "${targetTemplate?.name || workflowName}" successfully.`,
+      workflow: {
+        _id: createdWorkflow._id,
+        name: createdWorkflow.name,
+        description: createdWorkflow.description,
+        nodes: createdWorkflow.nodes,
+        edges: createdWorkflow.edges,
+        schedule: createdWorkflow.schedule,
+        webhook: {
+          enabled: createdWorkflow.webhook?.enabled || false,
+          token: createdWorkflow.webhook?.token,
+          hasSecret: Boolean(createdWorkflow.webhook?.secret)
+        },
+        createdAt: createdWorkflow.createdAt,
+        updatedAt: createdWorkflow.updatedAt
+      }
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map((val) => val.message);
+      return res.status(400).json({
+        success: false,
+        message: messages.join(', ')
+      });
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to instantiate template due to an internal server error.'
+    });
+  }
+};
+
 

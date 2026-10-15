@@ -1182,6 +1182,7 @@ export const executeWithFailover = async (config, options) => {
     // so transient failures immediately fail over to the next healthy provider
     const candidateOptions = {
       ...options,
+      baseUrl: candidate.provider === config.provider ? options.baseUrl : undefined,
       maxRetries: typeof options.maxRetriesPerProvider === 'number' ? options.maxRetriesPerProvider : 0
     };
 
@@ -1249,7 +1250,7 @@ export const executeWithFailover = async (config, options) => {
         provider: candidate.provider,
         model: candidate.model,
         status: result.status || 'permanent_error',
-        error: result.error,
+        error: sanitizeSecretsInString(result.error),
         durationMs: attemptDurationMs,
         success: false,
         retryable: false,
@@ -1275,7 +1276,7 @@ export const executeWithFailover = async (config, options) => {
         provider: candidate.provider,
         model: candidate.model,
         status: result.status || (result.isTimeout ? 'timeout' : 'network_error'),
-        error: result.error,
+        error: sanitizeSecretsInString(result.error),
         durationMs: attemptDurationMs,
         success: false,
         retryable: isTransient,
@@ -1309,7 +1310,7 @@ export const executeWithFailover = async (config, options) => {
       provider: candidate.provider,
       model: candidate.model,
       status: result.status || 'permanent_error',
-      error: result.error,
+      error: sanitizeSecretsInString(result.error),
       durationMs: attemptDurationMs,
       success: false,
       retryable: false,
@@ -1332,7 +1333,7 @@ export const executeWithFailover = async (config, options) => {
   // All providers in cascade were attempted or skipped without success
   return {
     success: false,
-    error: lastTransientResult?.error || 'All AI providers in automatic failover cascade failed.',
+    error: sanitizeSecretsInString(lastTransientResult?.error || 'All AI providers in automatic failover cascade failed.'),
     durationMs: Date.now() - overallStartTime,
     failoverLog,
     telemetry: {

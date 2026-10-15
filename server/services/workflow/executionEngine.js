@@ -191,6 +191,7 @@ const executeNodeSafely = async (node, incomingInput, options = {}, workflowCont
 
       return {
         success: true,
+        requestTelemetry: options.triggerPayload || node.data?.payload || null,
         output: {
           triggerType: options.triggerSource || node.data?.triggerType || 'manual',
           timestamp: new Date().toISOString(),

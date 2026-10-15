@@ -282,7 +282,9 @@ Routing Outcome:
 | `GET` | `/api/workflows/:id` | Private (JWT) | Fetches workflow definition by ID (IDOR protected) |
 | `PUT` | `/api/workflows/:id` | Private (JWT) | Updates workflow nodes and edges |
 | `DELETE`| `/api/workflows/:id` | Private (JWT) | Deletes workflow document |
-| `POST` | `/api/workflows/:id/duplicate` | Private (JWT) | Duplicates workflow as a new document |
+| `POST` | `/api/workflows/:id/duplicate` | Private (JWT) | Duplicates workflow as a new document with remapped IDs |
+| `GET` | `/api/workflows/templates` | Private (JWT) | Lists available workflow blueprints and catalog templates |
+| `POST` | `/api/workflows/from-template` | Private (JWT) | Instantiates a new workflow from a catalog blueprint |
 | `GET` | `/api/workflows/:id/triggers` | Private (JWT) | Fetches schedule and webhook configurations |
 | `PUT` | `/api/workflows/:id/schedule` | Private (JWT) | Updates workflow cron schedule |
 | `PUT` | `/api/workflows/:id/webhook` | Private (JWT) | Generates/updates webhook token and HMAC secret |
@@ -298,9 +300,12 @@ Routing Outcome:
 ### Execution Telemetry Endpoints (`/api/executions`)
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
-| `GET` | `/api/executions` | Private (JWT) | Paginated list of user execution traces with status filter |
+| `GET` | `/api/executions` | Private (JWT) | Paginated list of user execution traces with status & trigger filter |
 | `GET` | `/api/executions/stats` | Private (JWT) | Aggregated stats (total, succeeded, failed, success rate) |
 | `GET` | `/api/executions/:id` | Private (JWT) | Detailed trace including node-level inputs, outputs, and failoverLog |
+| `POST` | `/api/executions/:id/rerun` | Private (Rate Limited) | Reruns execution preserving original trigger payload and lineage |
+| `DELETE`| `/api/executions/:id` | Private (JWT) | Deletes a single execution trace (owner-only) |
+| `POST` | `/api/executions/purge-failed` | Private (JWT) | Purges all failed execution records for authenticated user |
 
 ### Health Probes (`/api/health`)
 | Method | Endpoint | Access | Description |

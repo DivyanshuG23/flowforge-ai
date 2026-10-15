@@ -136,8 +136,9 @@ export const getUserExecutions = async (req, res) => {
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 10));
     const skip = (page - 1) * limit;
 
+    const userId = req.user?.id || req.user?._id;
     // Strict user-level data isolation
-    const filter = { user: req.user.id };
+    const filter = { user: userId };
 
     // Filter by status if specified and valid
     const validStatuses = ['queued', 'running', 'succeeded', 'failed'];
@@ -151,7 +152,7 @@ export const getUserExecutions = async (req, res) => {
     }
 
     // Filter by triggerSource if specified
-    const validTriggers = ['manual', 'scheduled', 'webhook'];
+    const validTriggers = ['manual', 'scheduled', 'webhook', 'rerun'];
     if (req.query.triggerSource && validTriggers.includes(req.query.triggerSource)) {
       filter.triggerSource = req.query.triggerSource;
     }
@@ -192,7 +193,7 @@ export const getUserExecutions = async (req, res) => {
  */
 export const getUserExecutionStats = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id || req.user?._id;
 
     const [total, succeeded, failed, running, queued] = await Promise.all([
       Execution.countDocuments({ user: userId }),
@@ -231,6 +232,7 @@ export const getUserExecutionStats = async (req, res) => {
 export const getExecutionById = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.id || req.user?._id;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -241,7 +243,7 @@ export const getExecutionById = async (req, res) => {
 
     const execution = await Execution.findOne({
       _id: id,
-      user: req.user.id
+      user: userId
     }).populate('workflow', 'name description');
 
     if (!execution) {
@@ -262,4 +264,165 @@ export const getExecutionById = async (req, res) => {
     });
   }
 };
+
+/**
+ * @route   POST /api/executions/:id/rerun
+ * @desc    Rerun a past execution for the authenticated user
+ * @access  Private (JWT required)
+ */
+export const rerunExecution = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid execution ID format.'
+      });
+    }
+
+    // 1. Find past execution belonging to authenticated user
+    const pastExecution = await Execution.findOne({
+      _id: id,
+      user: userId
+    }).lean();
+
+    if (!pastExecution) {
+      return res.status(404).json({
+        success: false,
+        message: 'Execution record not found or access denied.'
+      });
+    }
+
+    // 2. Load the associated workflow
+    const workflow = await Workflow.findOne({
+      _id: pastExecution.workflow,
+      user: userId
+    }).lean();
+
+    if (!workflow) {
+      return res.status(404).json({
+        success: false,
+        message: 'The workflow associated with this execution no longer exists.'
+      });
+    }
+
+    if (!Array.isArray(workflow.nodes) || workflow.nodes.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot rerun empty workflow. Please add at least one node.'
+      });
+    }
+
+    // 3. Execute pipeline synchronously, reusing original trigger data if present
+    const executionResult = await executeWorkflowPipeline(workflow, {
+      triggerPayload: pastExecution.triggerData || null
+    });
+
+    // 4. Persist new execution record referencing original execution run
+    const newExecution = await Execution.create({
+      workflow: workflow._id,
+      user: userId,
+      status: executionResult.status,
+      startedAt: new Date(Date.now() - (executionResult.durationMs || 0)),
+      completedAt: new Date(),
+      durationMs: executionResult.durationMs || 0,
+      nodeExecutions: executionResult.nodeExecutions,
+      triggerSource: 'rerun',
+      triggerData: pastExecution.triggerData || null,
+      error: executionResult.error || null,
+      rerunFrom: pastExecution._id
+    });
+
+    // Populate workflow details for immediate client presentation
+    await newExecution.populate('workflow', 'name description');
+
+    return res.status(200).json({
+      success: executionResult.status === 'succeeded',
+      message: executionResult.status === 'succeeded'
+        ? 'Workflow rerun executed successfully.'
+        : executionResult.error || 'Workflow rerun halted due to an error.',
+      execution: newExecution
+    });
+  } catch (error) {
+    console.error('Rerun execution error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Workflow rerun failed due to an internal server error.'
+    });
+  }
+};
+
+/**
+ * @route   DELETE /api/executions/:id
+ * @desc    Delete an execution record owned by the authenticated user
+ * @access  Private (JWT required)
+ */
+export const deleteExecution = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user?.id || req.user?._id;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid execution ID format.'
+      });
+    }
+
+    const deletedExecution = await Execution.findOneAndDelete({
+      _id: id,
+      user: userId
+    });
+
+    if (!deletedExecution) {
+      return res.status(404).json({
+        success: false,
+        message: 'Execution record not found or access denied.'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Execution record deleted successfully.',
+      deletedId: id
+    });
+  } catch (error) {
+    console.error('Delete execution error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to delete execution record.'
+    });
+  }
+};
+
+/**
+ * @route   POST /api/executions/purge-failed
+ * @desc    Purge all failed execution records for the authenticated user
+ * @access  Private (JWT required)
+ */
+export const purgeFailedExecutions = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+
+    const result = await Execution.deleteMany({
+      user: userId,
+      status: 'failed'
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: `Successfully purged ${result.deletedCount || 0} failed execution(s).`,
+      purgedCount: result.deletedCount || 0
+    });
+  } catch (error) {
+    console.error('Purge failed executions error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to purge failed execution records.'
+    });
+  }
+};
+
 

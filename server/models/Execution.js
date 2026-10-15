@@ -101,13 +101,18 @@ const executionSchema = new mongoose.Schema(
     },
     triggerSource: {
       type: String,
-      enum: ['manual', 'scheduled', 'webhook'],
+      enum: ['manual', 'scheduled', 'webhook', 'rerun'],
       default: 'manual',
       required: true,
       index: true
     },
     triggerData: {
       type: mongoose.Schema.Types.Mixed,
+      default: null
+    },
+    rerunFrom: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Execution',
       default: null
     }
   },

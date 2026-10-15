@@ -32,6 +32,7 @@ import {
   getWorkflows, 
   deleteWorkflow, 
   duplicateWorkflow,
+  instantiateTemplate,
   getUserExecutionStats, 
   getUserExecutions, 
   getErrorMessage 
@@ -75,6 +76,7 @@ export default function Dashboard() {
   const [workflowToDelete, setWorkflowToDelete] = useState(null);
   const [isDeletingId, setIsDeletingId] = useState(null);
   const [isDuplicatingId, setIsDuplicatingId] = useState(null);
+  const [isInstantiatingTemplateId, setIsInstantiatingTemplateId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [actionFeedback, setActionFeedback] = useState(null);
 
@@ -196,6 +198,34 @@ export default function Dashboard() {
       setTimeout(() => setActionFeedback(null), 4000);
     } finally {
       setIsDuplicatingId(null);
+    }
+  };
+
+  // Handle one-click template instantiation from dashboard
+  const handleInstantiateTemplate = async (templateId, templateName) => {
+    if (!templateId || isInstantiatingTemplateId) return;
+    setIsInstantiatingTemplateId(templateId);
+    try {
+      const timestamp = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const customName = `${templateName} (${timestamp})`;
+      const response = await instantiateTemplate(templateId, { name: customName });
+      if (response?.success && response.workflow?._id) {
+        setActionFeedback({
+          type: 'success',
+          message: `Created "${response.workflow.name}". Opening visual canvas...`
+        });
+        navigate(`/workflows/${response.workflow._id}`);
+      } else {
+        throw new Error(response?.message || 'Failed to instantiate blueprint.');
+      }
+    } catch (err) {
+      setActionFeedback({
+        type: 'error',
+        message: getErrorMessage(err) || 'Failed to instantiate template.'
+      });
+      setTimeout(() => setActionFeedback(null), 4000);
+    } finally {
+      setIsInstantiatingTemplateId(null);
     }
   };
 
@@ -933,46 +963,118 @@ export default function Dashboard() {
 
             {/* 3 Featured Template Cards */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div 
-                onClick={() => navigate('/templates')}
-                className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">Data Bridge</span>
-                  <span className="text-[10px] text-[#B9B0A0]">REST API</span>
+              {/* Template 1: REST API Bridge */}
+              <div className="p-4 rounded-2xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all flex flex-col justify-between space-y-4 group">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">Data Bridge</span>
+                    <span className="text-[10px] text-[#B9B0A0]">REST API</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors">
+                    REST API Data Bridge
+                  </h4>
+                  <p className="text-xs text-[#B9B0A0] leading-relaxed">
+                    Fetches remote payload, validates response code 200, and formats outbound dispatch.
+                  </p>
                 </div>
-                <h4 className="text-sm font-semibold text-[#F5F0E6]">REST API Data Bridge</h4>
-                <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Fetches remote payload, validates response code 200, and formats outbound dispatch.
-                </p>
+                <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/templates')}
+                    className="text-xs text-[#B9B0A0] hover:text-[#F5F0E6] transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantiateTemplate('rest-api-bridge', 'REST API Data Bridge')}
+                    disabled={isInstantiatingTemplateId === 'rest-api-bridge' || !!isInstantiatingTemplateId}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.25)] text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {isInstantiatingTemplateId === 'rest-api-bridge' ? (
+                      <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isInstantiatingTemplateId === 'rest-api-bridge' ? 'Creating...' : 'Use Blueprint'}</span>
+                  </button>
+                </div>
               </div>
 
-              <div 
-                onClick={() => navigate('/templates')}
-                className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#059669]/30 transition-all space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#059669]">Self-Healing</span>
-                  <span className="text-[10px] text-[#B9B0A0]">AI Triage</span>
+              {/* Template 2: AI Incident Triage */}
+              <div className="p-4 rounded-2xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#059669]/30 transition-all flex flex-col justify-between space-y-4 group">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#059669]">Self-Healing</span>
+                    <span className="text-[10px] text-[#B9B0A0]">AI Triage</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-[#F5F0E6] group-hover:text-[#059669] transition-colors">
+                    AI Incident Triage & Auto-Retry
+                  </h4>
+                  <p className="text-xs text-[#B9B0A0] leading-relaxed">
+                    Analyzes operational logs with Gemini AI, branching to auto-heal or urgent escalation.
+                  </p>
                 </div>
-                <h4 className="text-sm font-semibold text-[#F5F0E6]">AI Incident Triage & Auto-Retry</h4>
-                <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Analyzes operational logs with Gemini AI, branching to auto-heal or urgent escalation.
-                </p>
+                <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/templates')}
+                    className="text-xs text-[#B9B0A0] hover:text-[#F5F0E6] transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantiateTemplate('ai-incident-triage', 'AI Incident Triage & Smart Recovery')}
+                    disabled={isInstantiatingTemplateId === 'ai-incident-triage' || !!isInstantiatingTemplateId}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.25)] text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {isInstantiatingTemplateId === 'ai-incident-triage' ? (
+                      <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isInstantiatingTemplateId === 'ai-incident-triage' ? 'Creating...' : 'Use Blueprint'}</span>
+                  </button>
+                </div>
               </div>
 
-              <div 
-                onClick={() => navigate('/templates')}
-                className="cursor-pointer p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all space-y-2"
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">AI Pipeline</span>
-                  <span className="text-[10px] text-[#B9B0A0]">Classification</span>
+              {/* Template 3: Sentiment Routing Pipeline */}
+              <div className="p-4 rounded-2xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.1)] hover:border-[#E5B45B]/30 transition-all flex flex-col justify-between space-y-4 group">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#E5B45B]">AI Pipeline</span>
+                    <span className="text-[10px] text-[#B9B0A0]">Classification</span>
+                  </div>
+                  <h4 className="text-sm font-semibold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors">
+                    Sentiment Routing Pipeline
+                  </h4>
+                  <p className="text-xs text-[#B9B0A0] leading-relaxed">
+                    Classifies customer feedback sentiment using LLM reasoning and routes to VIP care or standard log.
+                  </p>
                 </div>
-                <h4 className="text-sm font-semibold text-[#F5F0E6]">Sentiment Routing Pipeline</h4>
-                <p className="text-xs text-[#B9B0A0] leading-relaxed">
-                  Classifies customer feedback sentiment using LLM reasoning and routes to VIP care or standard log.
-                </p>
+                <div className="pt-2 border-t border-[rgba(185,176,160,0.08)] flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/templates')}
+                    className="text-xs text-[#B9B0A0] hover:text-[#F5F0E6] transition-colors"
+                  >
+                    View Details
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleInstantiateTemplate('sentiment-routing-pipeline', 'Customer Sentiment & Priority Router')}
+                    disabled={isInstantiatingTemplateId === 'sentiment-routing-pipeline' || !!isInstantiatingTemplateId}
+                    className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.25)] text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {isInstantiatingTemplateId === 'sentiment-routing-pipeline' ? (
+                      <Loader2 className="w-3.5 h-3.5 motion-safe:animate-spin" />
+                    ) : (
+                      <Sparkles className="w-3.5 h-3.5" />
+                    )}
+                    <span>{isInstantiatingTemplateId === 'sentiment-routing-pipeline' ? 'Creating...' : 'Use Blueprint'}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </section>

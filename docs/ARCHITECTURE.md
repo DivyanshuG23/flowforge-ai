@@ -349,7 +349,8 @@ flowchart LR
       error: String
     }
   ],
-  triggerSource: String (enum: ['manual', 'scheduled', 'webhook']),
+  triggerSource: String (enum: ['manual', 'scheduled', 'webhook', 'rerun']),
+  rerunFrom: ObjectId (ref: 'Execution', optional),
   triggerData: Mixed,
   error: String
 }

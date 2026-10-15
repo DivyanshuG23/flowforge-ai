@@ -914,6 +914,8 @@ function WorkflowEditorContent() {
         onClose={() => setExecutionModalOpen(false)}
         execution={activeExecution}
         error={executionError}
+        onRerun={handleExecute}
+        isRerunning={isRunning}
       />
     </div>
   );

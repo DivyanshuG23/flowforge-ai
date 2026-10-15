@@ -17,7 +17,7 @@ import {
   Globe,
   Sliders
 } from 'lucide-react';
-import { createWorkflow, duplicateWorkflow, getWorkflows, getErrorMessage } from '../services/api';
+import { createWorkflow, duplicateWorkflow, getWorkflows, instantiateTemplate, getErrorMessage } from '../services/api';
 import Sidebar from '../components/dashboard/Sidebar';
 import TopNav from '../components/dashboard/TopNav';
 
@@ -99,24 +99,26 @@ export default function Templates() {
     );
   }, [selectedCategory, searchQuery, userWorkflows]);
 
-  // Handle template deployment (creates real workflow in MongoDB)
+  // Handle template deployment (creates real workflow in MongoDB with remapped IDs and safe trigger defaults)
   const handleUseBuiltInTemplate = async (template) => {
-    if (instantiatingId) return; // Prevent double clicks
+    if (!template?.id || instantiatingId) return; // Prevent double clicks
     setInstantiatingId(template.id);
     setFeedback(null);
 
     try {
-      // Sensible editable name with timestamp
       const timestamp = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-      const payload = {
-        name: `${template.name} (${timestamp})`,
-        description: template.description,
-        nodes: template.workflowData.nodes,
-        edges: template.workflowData.edges
-      };
+      const customName = `${template.name} (${timestamp})`;
 
-      const res = await createWorkflow(payload);
+      const res = await instantiateTemplate(template.id, {
+        name: customName,
+        description: template.description
+      });
+
       if (res?.success && res.workflow?._id) {
+        setFeedback({
+          type: 'success',
+          message: `Created "${res.workflow.name}". Redirecting to visual builder...`
+        });
         navigate(`/workflows/${res.workflow._id}`);
       } else {
         throw new Error(res?.message || 'Failed to instantiate blueprint.');
@@ -191,9 +193,17 @@ export default function Templates() {
 
           {/* Feedback Banner */}
           {feedback && (
-            <div className="p-4 rounded-2xl bg-[#C83C3C]/15 border border-[#C83C3C]/30 flex items-center space-x-3 text-[#C83C3C] text-sm">
-              <AlertCircle className="w-5 h-5 flex-shrink-0" />
-              <span>{feedback.message}</span>
+            <div className={`p-4 rounded-2xl flex items-center space-x-3 text-sm animate-fade-in ${
+              feedback.type === 'success'
+                ? 'bg-[#059669]/15 border border-[#059669]/30 text-[#059669]'
+                : 'bg-[#C83C3C]/15 border border-[#C83C3C]/30 text-[#C83C3C]'
+            }`}>
+              {feedback.type === 'success' ? (
+                <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-[#059669]" />
+              ) : (
+                <AlertCircle className="w-5 h-5 flex-shrink-0 text-[#C83C3C]" />
+              )}
+              <span className="font-medium">{feedback.message}</span>
             </div>
           )}
 

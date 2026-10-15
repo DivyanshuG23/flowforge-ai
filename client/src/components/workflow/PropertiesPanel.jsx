@@ -24,6 +24,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { sanitizeTelemetryData } from '../../utils/sanitizeTelemetry';
+import AiProviderAttemptsViewer from './AiProviderAttemptsViewer';
 
 const generateRandomToken = () => {
   const bytes = new Uint8Array(24);
@@ -293,6 +294,23 @@ export default function PropertiesPanel({
                     </div>
                   </div>
                 )}
+
+                {/* AI Cascade & Attempt Telemetry */}
+                <div className="pt-2 border-t border-[rgba(185,176,160,0.06)]">
+                  <span className="text-[10px] uppercase font-bold text-[#B9B0A0] block mb-1.5">
+                    Provider Execution Telemetry
+                  </span>
+                  <AiProviderAttemptsViewer
+                    step={{
+                      output: selectedNode.data.runtimeOutput,
+                      input: selectedNode.data,
+                      status: selectedNode.data.runtimeStatus || 'succeeded',
+                      error: selectedNode.data.runtimeError,
+                      nodeType: 'ai'
+                    }}
+                    compact={true}
+                  />
+                </div>
               </div>
             )}
 
@@ -1148,24 +1166,28 @@ export default function PropertiesPanel({
                       Cascade Priority Order
                     </span>
                     <div className="flex items-center gap-1 text-[11px] text-[#F5F0E6] font-mono flex-wrap">
-                      <span className="px-1.5 py-0.5 rounded bg-[rgba(229,180,91,0.15)] text-[#E5B45B] border border-[rgba(229,180,91,0.3)]">
-                        1. {selectedNode.data?.provider === 'groq' ? 'Groq' : selectedNode.data?.provider === 'mistral' ? 'Mistral' : selectedNode.data?.provider === 'openai' ? 'OpenAI' : 'Gemini'}
-                      </span>
-                      <span className="text-[#B9B0A0]">&rarr;</span>
-                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
-                        2. {selectedNode.data?.provider === 'groq' ? 'Gemini' : 'Groq'}
-                      </span>
-                      <span className="text-[#B9B0A0]">&rarr;</span>
-                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
-                        3. {selectedNode.data?.provider === 'openai' ? 'Groq' : 'OpenAI'}
-                      </span>
-                      <span className="text-[#B9B0A0]">&rarr;</span>
-                      <span className="px-1.5 py-0.5 rounded bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border border-[rgba(185,176,160,0.2)]">
-                        4. {selectedNode.data?.provider === 'mistral' ? 'OpenAI' : 'Mistral'}
-                      </span>
+                      {(() => {
+                        const curProvider = (selectedNode.data?.provider || 'gemini').toLowerCase();
+                        const defaultOrder = ['gemini', 'groq', 'openai', 'mistral'];
+                        const providers = [curProvider, ...defaultOrder.filter((p) => p !== curProvider)];
+                        const labels = { gemini: 'Gemini', groq: 'Groq', openai: 'OpenAI', mistral: 'Mistral' };
+
+                        return providers.map((p, idx) => (
+                          <React.Fragment key={p}>
+                            {idx > 0 && <span className="text-[#B9B0A0]">&rarr;</span>}
+                            <span className={`px-1.5 py-0.5 rounded border ${
+                              idx === 0
+                                ? 'bg-[rgba(229,180,91,0.15)] text-[#E5B45B] border-[rgba(229,180,91,0.3)] font-semibold'
+                                : 'bg-[rgba(185,176,160,0.1)] text-[#B9B0A0] border-[rgba(185,176,160,0.2)]'
+                            }`}>
+                              {idx + 1}. {labels[p] || p}
+                            </span>
+                          </React.Fragment>
+                        ));
+                      })()}
                     </div>
                     <p className="text-[10px] text-[#B9B0A0]/80 leading-relaxed">
-                      Permanent errors (400, 401, 403, 404, safety filter blocks) fail immediately without cascading. Unconfigured fallback API keys are skipped gracefully.
+                      Authentication (401/403), client errors (400), and safety filter blocks halt immediately. Transient failures (429/5xx) and retired models (404) trigger automatic fallback. Unconfigured API keys are skipped safely.
                     </p>
                   </div>
                 )}

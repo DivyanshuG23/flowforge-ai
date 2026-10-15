@@ -166,6 +166,16 @@ export const duplicateWorkflow = async (id) => {
   return response.data;
 };
 
+export const getWorkflowTemplates = async () => {
+  const response = await api.get('/workflows/templates');
+  return response.data;
+};
+
+export const instantiateTemplate = async (templateId, customPayload = {}) => {
+  const response = await api.post('/workflows/from-template', { templateId, ...customPayload });
+  return response.data;
+};
+
 export const getWorkflowTriggers = async (workflowId) => {
   const response = await api.get(`/workflows/${workflowId}/triggers`);
   return response.data;
@@ -206,6 +216,21 @@ export const getUserExecutionStats = async () => {
 
 export const getExecutionById = async (executionId) => {
   const response = await api.get(`/executions/${executionId}`);
+  return response.data;
+};
+
+export const rerunExecution = async (executionId) => {
+  const response = await api.post(`/executions/${executionId}/rerun`);
+  return response.data;
+};
+
+export const deleteExecution = async (executionId) => {
+  const response = await api.delete(`/executions/${executionId}`);
+  return response.data;
+};
+
+export const purgeFailedExecutions = async () => {
+  const response = await api.post('/executions/purge-failed');
   return response.data;
 };
 
