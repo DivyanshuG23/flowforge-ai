@@ -29,13 +29,13 @@ const typeIcons = {
 };
 
 export default function ExecutionResultModal({ isOpen, onClose, execution, error, onRerun, isRerunning = false }) {
+  const [copiedKey, setCopiedKey] = useState(null);
+  const [activeTabs, setActiveTabs] = useState({});
+
   if (!isOpen) return null;
 
   const isSuccess = execution?.status === 'succeeded';
   const nodeExecutions = execution?.nodeExecutions || [];
-
-  const [copiedKey, setCopiedKey] = useState(null);
-  const [activeTabs, setActiveTabs] = useState({});
 
   const handleCopy = (key, data) => {
     try {
