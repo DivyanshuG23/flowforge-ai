@@ -627,7 +627,7 @@ export default function Home() {
             </div>
             <h3 className="text-base font-bold text-[#F5F0E6]">Multi-Provider AI Reasoning</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Powered by Google Gemini (gemini-2.5-flash &amp; gemini-3.8-flash) with optional automatic failover to Groq, OpenAI, or Mistral AI. Ingests context variables, enforces structured JSON output, and computes token telemetry.
+              Powered by Google Gemini (gemini-2.5-flash) with optional automatic failover to Groq, OpenAI, or Mistral AI. Ingests context variables, enforces structured JSON output, and computes token telemetry.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#E5B45B] border border-[rgba(185,176,160,0.1)]">
@@ -897,7 +897,7 @@ export default function Home() {
             },
             {
               q: "Which AI models and providers can I configure?",
-              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash and gemini-3.8-flash models, providing sub-second inference with structured JSON formatting. It also supports Groq (openai/gpt-oss-20b), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
+              a: "FlowForge AI defaults to Google's verified gemini-2.5-flash model, providing sub-second inference with structured JSON formatting. It also supports Groq (openai/gpt-oss-20b), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
             },
             {
               q: "How does automatic AI failover work, and what are its prerequisites?",

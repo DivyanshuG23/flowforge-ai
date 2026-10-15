@@ -846,7 +846,7 @@ export default function PropertiesPanel({
                   value={selectedNode.data?.provider || 'gemini'}
                   onChange={(e) => {
                     const newProvider = e.target.value;
-                    let newModel = 'gemini-3.8-flash';
+                    let newModel = 'gemini-2.5-flash';
                     if (newProvider === 'groq') newModel = 'openai/gpt-oss-20b';
                     else if (newProvider === 'mistral') newModel = 'mistral-small-latest';
                     else if (newProvider === 'openai' || newProvider === 'openai-compatible') newModel = 'gpt-4o-mini';
@@ -880,7 +880,7 @@ export default function PropertiesPanel({
                       const defaultPreset =
                         selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                         selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                        selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini';
+                        selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini';
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
                         _isCustomModel: !isCustom,
@@ -905,7 +905,7 @@ export default function PropertiesPanel({
                     placeholder={
                       selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                      selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
                     }
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B]"
                   />
@@ -914,7 +914,7 @@ export default function PropertiesPanel({
                     value={selectedNode.data?.model || (
                       selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
                       selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
-                      selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
+                      selectedNode.data?.provider === 'gemini' ? 'gemini-2.5-flash' : 'gpt-4o-mini'
                     )}
                     onChange={(e) =>
                       onUpdateNode(selectedNode.id, {
@@ -926,9 +926,9 @@ export default function PropertiesPanel({
                   >
                     {selectedNode.data?.provider === 'gemini' && (
                       <>
-                        <option value="gemini-3.8-flash">gemini-3.8-flash (Recommended / Verified Active)</option>
-                        <option value="gemini-2.5-flash">gemini-2.5-flash (Fast Stable / Existing Keys)</option>
+                        <option value="gemini-2.5-flash">gemini-2.5-flash (Recommended / Stable Flash)</option>
                         <option value="gemini-flash-latest">gemini-flash-latest (Latest Release)</option>
+                        <option value="gemini-2.5-pro">gemini-2.5-pro (Flagship Reasoning Pro)</option>
                         <option value="gemini-2.0-flash">gemini-2.0-flash (Verified Stable)</option>
                       </>
                     )}

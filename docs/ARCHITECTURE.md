@@ -147,7 +147,7 @@ flowchart TD
     Single --> SingleDone["Return Success or Throw Fatal Error"]
     
     OptIn -- "Yes" --> Init["Initialize Monotonic Timeout Budget (e.g. 15,000 ms)"]
-    Init --> P1["Attempt 1: Google Gemini (gemini-2.5-flash / 3.8-flash)"]
+    Init --> P1["Attempt 1: Google Gemini (gemini-2.5-flash)"]
     
     P1 --> Eval1{"Attempt 1 Result"}
     Eval1 -- "HTTP 200 OK" --> Success["Commit State & Log Cascade Telemetry"]
@@ -179,7 +179,7 @@ flowchart TD
 ```
 
 ### Provider Cascade Order
-1. **Google Gemini (Primary):** `gemini-2.5-flash` / `gemini-3.8-flash` (REST API).
+1. **Google Gemini (Primary):** `gemini-2.5-flash` (REST API).
 2. **Groq (Fallback 1):** `openai/gpt-oss-20b` (OpenAI-compatible REST API).
 3. **OpenAI (Fallback 2):** `gpt-4o-mini` (OpenAI Chat Completions API).
 4. **Mistral AI (Fallback 3):** `mistral-small-latest` (OpenAI-compatible REST API).
@@ -300,7 +300,7 @@ flowchart LR
      }
      ```
 2. **Node 2 (`node-ai-1`):** AI Incident Triage
-   - Model: `gemini-2.5-flash` (or `gemini-3.8-flash`) &bull; Output: Structured JSON (`{ severity: "high" | "low", reason: string, recommendedAction: string }`).
+   - Model: `gemini-2.5-flash` &bull; Output: Structured JSON (`{ severity: "high" | "low", reason: string, recommendedAction: string }`).
    - Failover: `enableFailover: true`.
 3. **Node 3 (`node-condition-1`):** High Severity Branch
    - Rule: `field: 'structured.severity'`, `operator: 'equals'`, `value: 'high'`.

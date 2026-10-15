@@ -23,7 +23,7 @@ export const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds
 export const MIN_TIMEOUT_MS = 1000; // 1 second
 export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 
-export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.8-flash';
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash';
 export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'openai/gpt-oss-20b';
 export const DEFAULT_OPENAI_MODEL = process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
 export const DEFAULT_MISTRAL_MODEL = process.env.MISTRAL_DEFAULT_MODEL || 'mistral-small-latest';

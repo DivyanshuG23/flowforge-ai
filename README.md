@@ -202,7 +202,7 @@ Prompt Template:
 Latency: {{trigger.payload.latencyP99Ms}}ms, Error Rate: {{trigger.payload.errorRatePercent}}%.
 Output JSON schema: { severity: 'high' | 'low', escalate: boolean, reason: string, recommendedAction: string }"
 
-Attempt 1 [gemini / gemini-3.8-flash]: HTTP 503 Overloaded (42ms) -> Failover Initiated
+Attempt 1 [gemini / gemini-2.5-flash]: HTTP 503 Overloaded (42ms) -> Failover Initiated
 Attempt 2 [groq / openai/gpt-oss-20b]: HTTP 200 OK (312ms) -> Recovered Successfully
 
 Structured Output:
@@ -345,7 +345,7 @@ OPENAI_API_KEY=your_openai_api_key_here
 MISTRAL_API_KEY=your_mistral_api_key_here
 
 # Default AI Model Settings
-GEMINI_DEFAULT_MODEL=gemini-3.8-flash
+GEMINI_DEFAULT_MODEL=gemini-2.5-flash
 GROQ_DEFAULT_MODEL=openai/gpt-oss-20b
 OPENAI_DEFAULT_MODEL=gpt-4o-mini
 MISTRAL_DEFAULT_MODEL=mistral-small-latest

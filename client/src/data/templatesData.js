@@ -38,7 +38,7 @@ export const BUILT_IN_TEMPLATES = [
             type: 'ai',
             label: 'AI Incident Triage',
             provider: 'gemini',
-            model: 'gemini-3.8-flash',
+            model: 'gemini-2.5-flash',
             enableFailover: true,
             prompt: 'Analyze the system incident payload and determine severity. Output JSON with fields: { severity: "high" | "low", reason: string, recommendedAction: string }.',
             systemPrompt: 'You are an autonomous SRE incident classifier assistant.',
