@@ -22,7 +22,12 @@ const userSchema = new mongoose.Schema(
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      required: [
+        function () {
+          return this.authProvider === 'local' || !this.googleId;
+        },
+        'Password is required'
+      ],
       minlength: [6, 'Password must be at least 6 characters long']
     },
     role: {
@@ -32,6 +37,31 @@ const userSchema = new mongoose.Schema(
         message: '{VALUE} is not a valid role'
       },
       default: 'user'
+    },
+    authProvider: {
+      type: String,
+      enum: {
+        values: ['local', 'google'],
+        message: '{VALUE} is not a valid auth provider'
+      },
+      default: 'local'
+    },
+    googleId: {
+      type: String,
+      trim: true,
+      sparse: true,
+      unique: true,
+      required: [
+        function () {
+          return this.authProvider === 'google';
+        },
+        'Google ID is required for Google authentication'
+      ]
+    },
+    avatar: {
+      type: String,
+      trim: true,
+      default: null
     }
   },
   {

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { loginUser, getErrorMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import GoogleSignInButton from '../components/auth/GoogleSignInButton';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -140,6 +141,32 @@ export default function Login() {
             </div>
           )}
 
+
+          {/* Google Sign In */}
+          <GoogleSignInButton
+            loading={loading}
+            setLoading={setLoading}
+            isSignUp={false}
+            onSuccess={(response) => {
+              try {
+                sessionStorage.removeItem('flowforge_redirect_after_login');
+              } catch {
+                // Ignore storage restrictions
+              }
+              login(response.token, response.user);
+              navigate(redirectPath, { replace: true });
+            }}
+            onError={(errMsg) => setError(errMsg)}
+          />
+
+          {/* Divider */}
+          <div className="relative flex py-1 items-center">
+            <div className="flex-grow border-t border-[rgba(185,176,160,0.12)]"></div>
+            <span className="flex-shrink mx-3 text-[11px] font-semibold uppercase tracking-wider text-[#B9B0A0]/60">
+              or continue with email
+            </span>
+            <div className="flex-grow border-t border-[rgba(185,176,160,0.12)]"></div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-5" noValidate>
             {/* Email Field */}

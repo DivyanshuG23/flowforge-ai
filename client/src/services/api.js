@@ -55,8 +55,8 @@ api.interceptors.response.use(
     const status = error?.response?.status;
     const requestUrl = error?.config?.url || '';
 
-    // Ignore 401s on login/register endpoints to allow standard credential validation messages
-    const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+    // Ignore 401s on login/register/google endpoints to allow standard credential validation messages
+    const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register') || requestUrl.includes('/auth/google');
 
     // Only handle HTTP 401 Unauthorized on authenticated routes — never treat 403 Forbidden as expired session
     if (status === 401 && !isAuthEndpoint) {
@@ -112,6 +112,15 @@ export const registerUser = async (userData) => {
  */
 export const loginUser = async (credentials) => {
   const response = await api.post('/auth/login', credentials);
+  return response.data;
+};
+
+/**
+ * Authenticate or register a user via Google ID token credential
+ * @param {{ idToken?: string, credential?: string }} data
+ */
+export const googleLoginUser = async (data) => {
+  const response = await api.post('/auth/google', data);
   return response.data;
 };
 

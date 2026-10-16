@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import { verifyGoogleIdToken } from '../services/googleAuthService.js';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -147,6 +148,156 @@ export const login = async (req, res, next) => {
 };
 
 /**
+ * Authenticate or register a user via verified Google ID token
+ * @route   POST /api/auth/google
+ * @access  Public
+ */
+export const googleLogin = async (req, res, next) => {
+  try {
+    const rawToken = req.body?.idToken || req.body?.credential;
+    if (!rawToken || typeof rawToken !== 'string' || !rawToken.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google ID token is required'
+      });
+    }
+
+    const googleClientId = process.env.GOOGLE_CLIENT_ID;
+    if (!googleClientId || !googleClientId.trim()) {
+      return res.status(500).json({
+        success: false,
+        message: 'Server configuration error: GOOGLE_CLIENT_ID is not configured'
+      });
+    }
+
+    // Verify Google ID token cryptographically
+    // Derives verified claims only: googleId, email, name, avatar, emailVerified
+    let verifiedPayload;
+    try {
+      verifiedPayload = await verifyGoogleIdToken(rawToken, googleClientId);
+    } catch (verifyError) {
+      const status = verifyError.statusCode || 401;
+      return res.status(status).json({
+        success: false,
+        message: verifyError.message || 'Google token verification failed'
+      });
+    }
+
+    const { googleId, email, name, avatar } = verifiedPayload;
+
+    // Account resolution & safe linking:
+    // 1. Check if user already exists by googleId
+    let user = await User.findOne({ googleId });
+
+    if (user) {
+      // Existing Google user. Backfill avatar if currently absent
+      if (!user.avatar && avatar) {
+        user.avatar = avatar;
+        await user.save();
+      }
+    } else {
+      // 2. Check if an account already exists with this verified email
+      const existingUserByEmail = await User.findOne({ email });
+
+      if (existingUserByEmail) {
+        // Safe linking:
+        // payload.emailVerified is strictly true (asserted by verifier).
+        // Check if existing account is already linked to a different Google ID:
+        if (existingUserByEmail.googleId && existingUserByEmail.googleId !== googleId) {
+          return res.status(409).json({
+            success: false,
+            message: 'An account with this email is already linked to a different Google account'
+          });
+        }
+
+        // Link Google ID to existing account.
+        // NEVER touch existing password hash (preserves existing password login).
+        existingUserByEmail.googleId = googleId;
+        if (!existingUserByEmail.avatar && avatar) {
+          existingUserByEmail.avatar = avatar;
+        }
+        user = await existingUserByEmail.save();
+      } else {
+        // 3. New user registration via Google
+        try {
+          user = await User.create({
+            name,
+            email,
+            googleId,
+            authProvider: 'google',
+            avatar: avatar || null
+          });
+        } catch (createErr) {
+          // Handle concurrency race condition (duplicate key error E11000)
+          if (createErr.code === 11000) {
+            user = await User.findOne({
+              $or: [{ googleId }, { email }]
+            });
+            if (!user) {
+              throw createErr;
+            }
+
+            // Security Hardening (SEC-01): Re-validate identity match in race-recovery path
+            if (user.googleId && user.googleId !== googleId) {
+              return res.status(409).json({
+                success: false,
+                message: 'An account with this email is already linked to a different Google account'
+              });
+            }
+
+            // If account was created locally during the race without googleId, link safely
+            if (!user.googleId) {
+              user.googleId = googleId;
+              if (!user.avatar && avatar) {
+                user.avatar = avatar;
+              }
+              await user.save();
+            } else if (!user.avatar && avatar) {
+              user.avatar = avatar;
+              await user.save();
+            }
+          } else {
+            throw createErr;
+          }
+        }
+      }
+    }
+
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      throw new Error('JWT_SECRET is not configured in environment variables');
+    }
+
+    const token = jwt.sign(
+      {
+        id: user._id,
+        role: user.role
+      },
+      jwtSecret,
+      {
+        expiresIn: process.env.JWT_EXPIRES_IN || '1d'
+      }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Google authentication successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        authProvider: user.authProvider,
+        avatar: user.avatar || null
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Get authenticated user profile
  * @route   GET /api/auth/me
  * @access  Private (JWT required)
@@ -213,33 +364,34 @@ export const updateProfile = async (req, res, next) => {
       user.name = name.trim();
     }
 
-    // Password change
+    // Password change or initial password creation for OAuth users
     if (newPassword || currentPassword) {
-      if (!currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is required to set a new password.'
-        });
+      if (user.password) {
+        if (!currentPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is required to set a new password.'
+          });
+        }
+        const isMatch = await bcrypt.compare(currentPassword, user.password);
+        if (!isMatch) {
+          return res.status(400).json({
+            success: false,
+            message: 'Current password is incorrect.'
+          });
+        }
+        if (currentPassword === newPassword) {
+          return res.status(400).json({
+            success: false,
+            message: 'New password must be different from current password.'
+          });
+        }
       }
+
       if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 6) {
         return res.status(400).json({
           success: false,
           message: 'New password must be at least 6 characters long.'
-        });
-      }
-
-      const isMatch = await bcrypt.compare(currentPassword, user.password);
-      if (!isMatch) {
-        return res.status(400).json({
-          success: false,
-          message: 'Current password is incorrect.'
-        });
-      }
-
-      if (currentPassword === newPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'New password must be different from current password.'
         });
       }
 
