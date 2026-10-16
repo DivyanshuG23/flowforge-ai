@@ -196,7 +196,7 @@ const geminiResult = await executeAiRequest({
 assert(geminiResult.success === true, 'Gemini execution succeeds');
 assert(geminiResult.text === 'Analysis completed: System CPU spike resolved.', 'Extracts correct Gemini text');
 assert(geminiResult.provider === 'gemini', 'Reports gemini provider');
-assert(geminiResult.model === 'gemini-2.5-flash', 'Uses default gemini model');
+assert(geminiResult.model === 'gemini-3.8-flash', 'Uses default gemini model');
 assert(geminiResult.usage.promptTokens === 18, 'Extracts prompt tokens');
 assert(geminiResult.usage.completionTokens === 32, 'Extracts completion tokens');
 assert(geminiResult.usage.totalTokens === 50, 'Extracts total tokens');

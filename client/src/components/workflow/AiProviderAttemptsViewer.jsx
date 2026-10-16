@@ -12,6 +12,9 @@ import {
   Info,
   Zap
 } from 'lucide-react';
+import { isGroqMetadata, resolveAiViewerMode } from '../../utils/sanitizeTelemetry.js';
+
+export { isGroqMetadata, resolveAiViewerMode };
 
 /**
  * Strict client-side redaction of secrets, API keys, and bearer tokens
@@ -116,12 +119,14 @@ export default function AiProviderAttemptsViewer({ step, compact = false }) {
   if (!isAiNode) return null;
 
   const isSuccess = step.status === 'succeeded';
+  const isGroq = isGroqMetadata(step);
+
   const primaryProvider = (
     telemetry.primaryProvider || 
     output.provider || 
     input.provider || 
     (failoverLog && failoverLog[0]?.provider) || 
-    'gemini'
+    (isGroq ? 'groq' : 'gemini')
   ).toLowerCase();
 
   const finalProvider = (
@@ -131,27 +136,12 @@ export default function AiProviderAttemptsViewer({ step, compact = false }) {
     primaryProvider
   ).toLowerCase();
 
-  const finalModel = output.model || telemetry.finalModel || (failoverLog && failoverLog.find(f => f.success)?.model) || null;
+  const finalModel = output.model || input.model || telemetry.finalModel || (failoverLog && failoverLog.find(f => f.success)?.model) || null;
   const failoverTriggered = telemetry.failoverTriggered ?? (Array.isArray(failoverLog) && failoverLog.length > 1 && failoverLog.some((f, idx) => idx > 0 && f.success));
   const hasFailoverLog = Array.isArray(failoverLog) && failoverLog.length > 0;
 
-  // Determine Overall Failover Status Mode
-  let statusMode = 'single_provider';
-  if (hasFailoverLog) {
-    if (failoverLog.length === 1 && failoverLog[0].success) {
-      statusMode = 'primary_success';
-    } else if (failoverTriggered && isSuccess) {
-      statusMode = 'failover_resolved';
-    } else if (!isSuccess) {
-      statusMode = 'cascade_failed';
-    } else {
-      statusMode = 'multi_attempt';
-    }
-  } else if (input.enableFailover === false || output.enableFailover === false || telemetry.enableFailover === false) {
-    statusMode = 'failover_disabled';
-  } else {
-    statusMode = 'legacy_record';
-  }
+  // Determine Overall Failover Status Mode via shared resolver
+  const { mode: statusMode } = resolveAiViewerMode(step);
 
   const primaryMeta = PROVIDER_METADATA[primaryProvider] || { name: primaryProvider, badgeClass: 'text-[#E5B45B] bg-[#252419]', tag: primaryProvider };
   const finalMeta = PROVIDER_METADATA[finalProvider] || { name: finalProvider, badgeClass: 'text-[#E5B45B] bg-[#252419]', tag: finalProvider };
@@ -175,6 +165,13 @@ export default function AiProviderAttemptsViewer({ step, compact = false }) {
             <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#059669]/15 text-[#059669] border border-[#059669]/30 text-[10px] font-bold">
               <CheckCircle2 className="w-3 h-3 text-[#059669]" />
               <span>Primary Succeeded (Fallback Not Needed)</span>
+            </span>
+          )}
+
+          {statusMode === 'groq_direct' && (
+            <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/30 text-[10px] font-bold shadow-glow-gold/10">
+              <Zap className="w-3 h-3 text-[#F59E0B]" />
+              <span>Direct LPU Execution (Groq)</span>
             </span>
           )}
 
@@ -211,6 +208,9 @@ export default function AiProviderAttemptsViewer({ step, compact = false }) {
         <p className="text-[11px] text-[#B9B0A0] leading-relaxed">
           {statusMode === 'primary_success' && (
             <>Primary provider responded successfully on attempt 1. Downstream failover cascade was kept on standby.</>
+          )}
+          {statusMode === 'groq_direct' && (
+            <>Direct LPU inference completed via <strong className="text-[#F59E0B]">Groq LPU</strong> ({finalModel || 'openai/gpt-oss-20b'}). Fast single-provider execution in {step.durationMs ?? output.durationMs ?? input.durationMs ?? 0}ms with zero failover needed.</>
           )}
           {statusMode === 'failover_resolved' && (
             <>Initial provider encountered a transient error or model retirement. Automatic failover safely cascaded through configured providers and recovered on <strong className="text-[#E5B45B]">{finalMeta.name}</strong> ({finalModel || 'active model'}).</>
@@ -338,14 +338,18 @@ export default function AiProviderAttemptsViewer({ step, compact = false }) {
           <div className="flex items-center justify-between text-[#B9B0A0] pt-1.5 border-t border-[rgba(185,176,160,0.06)]">
             <span className="text-[10px] uppercase font-bold tracking-wider">Failover Policy:</span>
             <span className="font-mono text-[11px] text-[#B9B0A0]">
-              {statusMode === 'failover_disabled' ? 'Disabled (Strict Single Provider)' : 'Not Recorded (Legacy Execution)'}
+              {statusMode === 'groq_direct'
+                ? 'Single Provider (Direct LPU Inference)'
+                : statusMode === 'failover_disabled'
+                  ? 'Disabled (Strict Single Provider)'
+                  : 'Not Recorded (Legacy Execution)'}
             </span>
           </div>
-          {step.durationMs !== undefined && (
+          {(step.durationMs !== undefined || output.durationMs !== undefined || input.durationMs !== undefined) && (
             <div className="flex items-center justify-between text-[#B9B0A0] pt-1.5 border-t border-[rgba(185,176,160,0.06)]">
               <span className="text-[10px] uppercase font-bold tracking-wider">Step Latency:</span>
               <span className="font-mono text-[#E5B45B] text-[11px]">
-                {step.durationMs}ms
+                {step.durationMs ?? output.durationMs ?? input.durationMs}ms
               </span>
             </div>
           )}

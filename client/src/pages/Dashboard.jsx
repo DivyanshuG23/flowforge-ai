@@ -309,7 +309,7 @@ export default function Dashboard() {
                   </span>
                   <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(229,180,91,0.25)] text-[11px] font-mono text-[#E5B45B]">
                     <Sparkles className="w-3 h-3 text-[#E5B45B]" />
-                    <span>Primary AI: gemini-2.5-flash</span>
+                    <span>Primary AI: gemini-3.8-flash</span>
                   </span>
                   <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(185,176,160,0.15)] text-[11px] font-mono text-[#B9B0A0]">
                     <Shield className="w-3 h-3 text-[#B9B0A0]" />

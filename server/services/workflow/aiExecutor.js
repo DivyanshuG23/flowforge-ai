@@ -23,12 +23,42 @@ export const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds
 export const MIN_TIMEOUT_MS = 1000; // 1 second
 export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 
-export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-2.5-flash';
+export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.8-flash';
 export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'openai/gpt-oss-20b';
 export const DEFAULT_OPENAI_MODEL = process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
 export const DEFAULT_MISTRAL_MODEL = process.env.MISTRAL_DEFAULT_MODEL || 'mistral-small-latest';
 export const DEFAULT_TEMPERATURE = 0.2;
 export const DEFAULT_MAX_TOKENS = 1024;
+
+/**
+ * Known deprecated or retired Google Gemini models.
+ * Used for transparent, safe migration of legacy saved workflows.
+ */
+export const LEGACY_GEMINI_MODELS = new Set([
+  'gemini-2.5-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-pro',
+  'gemini-1.0-pro'
+]);
+
+/**
+ * Resolves Gemini model, safely migrating deprecated/retired model IDs
+ * from legacy saved workflow configs to the active supported Gemini model.
+ * Preserves custom/modern Gemini models without alteration.
+ *
+ * @param {string} [requestedModel]
+ * @returns {string}
+ */
+export const resolveGeminiModel = (requestedModel) => {
+  if (!requestedModel || typeof requestedModel !== 'string') {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  const trimmed = requestedModel.trim();
+  if (LEGACY_GEMINI_MODELS.has(trimmed.toLowerCase())) {
+    return DEFAULT_GEMINI_MODEL;
+  }
+  return trimmed;
+};
 
 export const RETRYABLE_HTTP_STATUSES = new Set([429, 500, 502, 503, 504]);
 export const MAX_AI_RETRIES = 2; // Up to 2 retries (total 3 attempts)
@@ -533,7 +563,7 @@ const executeGeminiRequest = async (config, options) => {
     };
   }
 
-  const model = config.model || DEFAULT_GEMINI_MODEL;
+  const model = resolveGeminiModel(config.model);
   const endpointUrl = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
   const sanitizedEndpoint = sanitizeUrl(endpointUrl);
 
@@ -1066,7 +1096,10 @@ export const buildFailoverChain = (primaryProvider = 'gemini', primaryModel = nu
 
   const normalizedPrimary = (primaryProvider || 'gemini').toLowerCase();
   const primaryConfig = PROVIDER_CONFIGS[normalizedPrimary] || PROVIDER_CONFIGS.gemini;
-  const resolvedPrimaryModel = primaryModel?.trim() || primaryConfig.defaultModel;
+  let resolvedPrimaryModel = primaryModel?.trim() || primaryConfig.defaultModel;
+  if (normalizedPrimary === 'gemini') {
+    resolvedPrimaryModel = resolveGeminiModel(resolvedPrimaryModel);
+  }
 
   const chain = [{ provider: normalizedPrimary, model: resolvedPrimaryModel }];
 
@@ -1429,10 +1462,12 @@ export const executeAiRequest = async (options = {}) => {
   }
 
   const resolvedDefaultModel = PROVIDER_CONFIGS[provider]?.defaultModel || (provider === 'gemini' ? DEFAULT_GEMINI_MODEL : DEFAULT_OPENAI_MODEL);
+  const initialModel = options.model?.trim?.() || resolvedDefaultModel;
+  const model = provider === 'gemini' ? resolveGeminiModel(initialModel) : initialModel;
 
   const config = {
     provider,
-    model: options.model?.trim?.() || resolvedDefaultModel,
+    model,
     fullPrompt,
     systemPrompt: options.systemPrompt,
     temperature,

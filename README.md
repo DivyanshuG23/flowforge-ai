@@ -350,7 +350,7 @@ OPENAI_API_KEY=your_openai_api_key_here
 MISTRAL_API_KEY=your_mistral_api_key_here
 
 # Default AI Model Settings
-GEMINI_DEFAULT_MODEL=gemini-2.5-flash
+GEMINI_DEFAULT_MODEL=gemini-3.8-flash
 GROQ_DEFAULT_MODEL=openai/gpt-oss-20b
 OPENAI_DEFAULT_MODEL=gpt-4o-mini
 MISTRAL_DEFAULT_MODEL=mistral-small-latest

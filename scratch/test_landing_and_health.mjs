@@ -115,7 +115,7 @@ async function runTests() {
   // Verify honest claims (no fake stats, no fake claims)
   assert(!homeContent.includes('99.999%'), 'Does not make fabricated uptime claims');
   assert(!homeContent.includes('Fortune 500'), 'Does not invent fake customer logos/testimonials');
-  assert(homeContent.includes('gemini-2.5-flash'), 'Honestly cites verified gemini-2.5-flash model');
+  assert(homeContent.includes('gemini-3.8-flash'), 'Honestly cites verified gemini-3.8-flash model');
 
   // Clean shutdown
   console.log('\n=============================================================');

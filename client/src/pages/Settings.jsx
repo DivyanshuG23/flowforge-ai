@@ -521,7 +521,7 @@ export default function Settings() {
                   <span>Google Gemini</span>
                 </div>
                 <p className="text-[11px] text-[#E5B45B] font-mono">
-                  Active: gemini-2.5-flash (Stable Flash)
+                  Active: gemini-3.8-flash (Stable Flash)
                 </p>
               </div>
 

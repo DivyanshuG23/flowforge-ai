@@ -17,7 +17,7 @@ const PROVIDER_METADATA = {
   gemini: {
     displayName: 'Google Gemini',
     badgeClass: 'text-[#E5B45B] bg-[#252419] border-[rgba(229,180,91,0.3)]',
-    defaultModel: 'gemini-2.5-flash',
+    defaultModel: 'gemini-3.8-flash',
   },
   groq: {
     displayName: 'Groq',
