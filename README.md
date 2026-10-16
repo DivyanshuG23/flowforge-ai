@@ -8,22 +8,50 @@
 [![Database](https://img.shields.io/badge/Database-MongoDB%20Atlas-151715?style=flat-square&logo=mongodb)](https://www.mongodb.com/atlas)
 [![Node.js](https://img.shields.io/badge/Runtime-Node.js%2024%20LTS-252419?style=flat-square&logo=node.js)](https://nodejs.org)
 [![React](https://img.shields.io/badge/Framework-React%2019-0B0D0C?style=flat-square&logo=react)](https://react.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-E5B45B?style=flat-square)](https://opensource.org/licenses/MIT)
+
+---
+
+## 📑 Table of Contents
+1. [Project Overview & Genuine Problem Statement](#project-overview-genuine-problem-statement)
+2. [System Architecture](#system-architecture)
+3. [Workflow Execution Lifecycle](#workflow-execution-lifecycle)
+4. [Verified Feature Matrix](#verified-feature-matrix)
+5. [Core Engineering Features](#core-engineering-features)
+   - [Visual Directed Acyclic Graph (DAG) Canvas](#1-visual-directed-acyclic-graph-dag-canvas)
+   - [Multi-Provider AI Failover Architecture](#2-multi-provider-ai-failover-architecture)
+   - [Visual Failover Cascade Viewer & 4-Tab Node Inspector](#3-visual-failover-cascade-viewer-4-tab-node-inspector)
+   - [Deterministic Execution & Selective Branch Skipping](#4-deterministic-execution-selective-branch-skipping)
+   - [Safe Condition Evaluator Service](#5-safe-condition-evaluator-service)
+   - [Network Security & SSRF Defense-in-Depth](#6-network-security-ssrf-defense-in-depth)
+   - [Trigger Subsystems: Webhooks & Scheduling](#7-trigger-subsystems-webhooks-scheduling)
+6. [Technology Stack](#technology-stack)
+7. [Flagship Interview Demo: AI Incident Triage & Smart Recovery](#flagship-interview-demo-ai-incident-triage-smart-recovery)
+8. [Complete API Reference](#complete-api-reference)
+9. [Environment Variables](#environment-variables)
+10. [Local Installation & Setup](#local-installation-setup)
+11. [Monorepo Package Scripts](#monorepo-package-scripts)
+12. [Deployment Overview: Vercel, Render & MongoDB Atlas](#deployment-overview-vercel-render-mongodb-atlas)
+13. [Automated Testing & Verification Suite](#automated-testing-verification-suite)
+14. [Security Considerations & Honest Disclosures](#security-considerations-honest-disclosures)
+15. [Resume Project Description](#resume-project-description)
+16. [License & Documentation](#license-documentation)
 
 ---
 
 ## 📌 Project Overview & Genuine Problem Statement
 
-Modern engineering teams rely heavily on visual automation platforms for incident triage, alerts routing, and data ETL. However, typical workflow systems suffer from three critical architectural flaws:
+Modern engineering teams rely heavily on visual automation platforms for incident triage, telemetry routing, and data transformation. However, typical workflow systems suffer from three critical architectural vulnerabilities:
 1. **Fragile Single-Provider AI Couplings:** When a primary LLM provider deprecates a model ID (HTTP 404), encounters service outages (HTTP 503), or exhausts quota limits (HTTP 429), standard automation pipelines fail catastrophically with no automatic fallback.
 2. **Opaque Runtime Telemetry:** Debugging multi-step pipelines is notoriously difficult when systems only report binary "Passed" or "Failed" states without millisecond-accurate step-by-step durations, input/output traces, or provider attempt telemetry.
 3. **Security Vulnerabilities in Dynamic Evaluation:** Many automation tools rely on unsafe JavaScript `eval()` or `new Function()` to parse conditional expressions, exposing backends to remote code execution and prototype pollution attacks.
 
 **FlowForge AI** solves these challenges by combining:
-- A **deterministic DAG execution engine** (Kahn's topological sort algorithm) with cycle detection, branch reachability, and diamond DAG convergence.
-- A **multi-provider AI failover cascade** (Google Gemini &rarr; Groq &rarr; OpenAI &rarr; Mistral AI) operating within a single monotonic timeout budget with exponential backoff and jitter.
-- A **Visual Failover Cascade Viewer** providing transparent, step-by-step attempt observability, discrete status pills, and sanitized error diagnostics.
-- A **safe condition evaluator** supporting 14 comparison operators with strict prototype pollution guards and zero `eval()`.
-- **Defense-in-depth security** featuring private IP CIDR rejection, DNS rebinding protection, request redirect re-validation, and multi-tenant IDOR guards.
+- A **deterministic DAG execution engine** (Kahn's topological sort algorithm) with cycle detection, selective branch skipping, and diamond dependency convergence.
+- A **multi-provider AI failover cascade** (Google Gemini `gemini-3.8-flash` &rarr; Groq `openai/gpt-oss-20b` &rarr; OpenAI `gpt-4o-mini` &rarr; Mistral AI `mistral-small-latest`) operating within a single monotonic timeout budget with exponential backoff and transparent legacy model normalization.
+- A **Visual Failover Cascade Viewer & 4-Tab Node Inspector** providing transparent, step-by-step attempt observability, discrete status pills, and sanitized error diagnostics.
+- A **safe condition evaluator** supporting 15 canonical comparison operators (with 29 token aliases) with strict prototype pollution guards and zero `eval()`.
+- **Defense-in-depth network security** featuring private IP CIDR rejection, DNS rebinding protection, request redirect re-validation, and multi-tenant IDOR guards.
 
 ---
 
@@ -33,10 +61,10 @@ Modern engineering teams rely heavily on visual automation platforms for inciden
 flowchart TD
     subgraph Client["Frontend Application (React 19 + Vite 8)"]
         Canvas["React Flow DAG Canvas (@xyflow/react)"]
-        Inspector["Properties Inspector Panel"]
+        Inspector["4-Tab Node Inspector (Output, Input, Telemetry, Cascade)"]
         Modal["Execution Result Modal"]
         Viewer["Visual Failover Cascade Viewer"]
-        TelemetryDash["Execution Telemetry Dashboard"]
+        TelemetryDash["Execution History & Rerun Controls"]
         Canvas <--> Inspector
         Canvas --> Modal
         Modal --> Viewer
@@ -49,8 +77,9 @@ flowchart TD
         AuthMiddleware["JWT Authentication & IDOR Verification"]
         Engine["Topological DAG Execution Engine"]
         Validator["Graph Validator (Kahn's Algorithm)"]
-        CondEval["Safe Condition Evaluator (14 Operators)"]
-        AIExec["Multi-Provider AI Executor"]
+        CondEval["Safe Condition Evaluator (15 Canonical Operators)"]
+        Interpolator["Prototype-Safe Template Interpolator"]
+        AIExec["Multi-Provider AI Executor (Gemini, Groq, OpenAI, Mistral)"]
         HTTPExec["SSRF-Guarded HTTP Request Executor"]
         Scheduler["In-Memory Scheduler (node-cron)"]
 
@@ -59,67 +88,77 @@ flowchart TD
         AuthMiddleware --> Validator
         Validator --> Engine
         Engine --> CondEval
+        Engine --> Interpolator
         Engine --> AIExec
         Engine --> HTTPExec
     end
 
-    subgraph Database["Persistence (MongoDB Atlas)"]
+    subgraph Database["Persistence Layer (MongoDB Atlas)"]
         Atlas[("MongoDB Collections: Users, Workflows, Executions")]
         AuthMiddleware <--> Atlas
         Engine <--> Atlas
     end
 
     subgraph Providers["External Inference Gateways"]
-        Gemini["Google Gemini (Primary)"]
-        Groq["Groq gpt-oss-20b (Fallback 1)"]
-        OpenAI["OpenAI gpt-4o-mini (Fallback 2)"]
-        Mistral["Mistral AI (Fallback 3)"]
+        Gemini["Google Gemini (Primary: gemini-3.8-flash)"]
+        Groq["Groq LPU (Fallback 1: openai/gpt-oss-20b)"]
+        OpenAI["OpenAI (Fallback 2: gpt-4o-mini)"]
+        Mistral["Mistral AI (Fallback 3: mistral-small-latest)"]
 
-        AIExec -->|REST API| Gemini
-        AIExec -->|OpenAI-Compatible| Groq
-        AIExec -->|OpenAI-Compatible| OpenAI
-        AIExec -->|OpenAI-Compatible| Mistral
+        AIExec -->|REST API v1beta| Gemini
+        AIExec -->|OpenAI-Compatible REST| Groq
+        AIExec -->|OpenAI Chat Completions| OpenAI
+        AIExec -->|OpenAI-Compatible REST| Mistral
     end
 ```
 
 ---
 
-## 📁 Repository Structure & Monorepo Layout
+## 🔄 Workflow Execution Lifecycle
 
-FlowForge AI is organized as a clean decoupled fullstack application:
+Every workflow execution in FlowForge AI follows a deterministic, 7-stage lifecycle:
 
-```text
-flowforge-ai/
-├── client/                     # Frontend SPA (React 19, Vite 8, Tailwind CSS)
-│   ├── public/                 # Static assets, SVG icons, and favicons
-│   ├── src/
-│   │   ├── components/         # Shared UI, layouts, and workflow canvas components
-│   │   │   ├── layout/         # Navbar, Footer, and responsive frame wrappers
-│   │   │   └── workflow/       # React Flow canvas, node types, Inspector, Failover Viewer
-│   │   ├── context/            # Authentication and global state providers
-│   │   ├── data/               # Flagship blueprints and production template definitions
-│   │   ├── pages/              # Landing page, Dashboard, Workflow Editor, Executions, Settings
-│   │   └── utils/              # Client telemetry sanitization and formatting helpers
-│   ├── .env.example            # Template for frontend environment configuration
-│   ├── package.json            # Client dependencies and Vite scripts
-│   └── vite.config.js          # Vite build config with manual chunks and React plugin
-├── server/                     # Backend API (Node.js 24 ESM, Express, Mongoose)
-│   ├── config/                 # MongoDB connection and environment bootstrapping
-│   ├── controllers/            # Request handlers for auth, workflows, and executions
-│   ├── middleware/             # JWT auth, IDOR validation, and per-route rate limiters
-│   ├── models/                 # Mongoose schemas (User, Workflow, Execution)
-│   ├── routes/                 # Express route definitions
-│   ├── services/
-│   │   └── workflow/           # DAG engine, Kahn's validator, AI executor, safe condition evaluator
-│   ├── utils/                  # SSRF IP validator, DNS resolver, secret sanitizers
-│   ├── .env.example            # Template for server environment variables
-│   ├── package.json            # Server dependencies and lifecycle scripts
-│   └── server.js               # Application entrypoint with graceful shutdown handling
-├── docs/                       # Detailed engineering documentation
-│   └── ARCHITECTURE.md         # Full system architecture and sequence diagrams
-├── scratch/                    # Offline automated verification suites and test harnesses
-└── README.md                   # Project overview, setup guide, and portfolio summary
+```mermaid
+flowchart LR
+    Create["1. Create / Remap\n(UUID generation)"] --> Config["2. Configure Nodes\n(Properties & Schema)"]
+    Config --> Ingest["3. Trigger Ingestion\n(Manual, Webhook, Cron)"]
+    Ingest --> Validate["4. Topological Sort\n(Cycle Detection)"]
+    Validate --> Execute["5. Sequential Node Run\n(Context Interpolation)"]
+    Execute --> Evaluate["6. Condition Routing\n(Branch Activation)"]
+    Evaluate --> Commit["7. Output & Telemetry\n(Execution Record)"]
 ```
+
+1. **Workflow Creation & Blueprints:** Workflows are created either on the blank drag-and-drop canvas or instantiated with one click from built-in blueprints. Duplications and template instances automatically remap all node and edge UUIDs to maintain isolated topologies.
+2. **Node Configuration:** Each node is configured via the contextual Properties Panel. Prompts and parameters support upstream template interpolation using standard `{{ variable }}` syntax (e.g. `{{ trigger.payload.service }}`).
+3. **Execution Ingestion:** Pipelines are triggered manually from the canvas, via incoming HTTP Webhook (`/api/workflows/webhook/:token`), via scheduled cron interval, or via rerun of a past execution.
+4. **Topological Graph Validation:** Kahn's algorithm validates acyclicity. If a cycle or disconnected edge is detected, execution halts immediately with actionable graph diagnostics.
+5. **Sequential Node Execution & Context Interpolation:** Nodes execute in deterministic topological order. Upstream outputs are aggregated into a prototype-safe resolution context.
+6. **Condition Evaluation & Selective Branch Skipping:** Condition nodes evaluate the configured field against comparison operators. The matching branch handle (`true` or `false`) is activated; nodes on unselected branches are marked `skipped` (`0ms`), and their downstream edges are deactivated.
+7. **State Persistence & Telemetry Collection:** Output nodes aggregate final payload data. The execution engine records full step-by-step inputs, outputs, durations, error traces, and AI attempt logs in MongoDB Atlas.
+
+---
+
+## 📊 Verified Feature Matrix
+
+| Capability | Implementation Status | Evidence / Verification Method |
+| :--- | :---: | :--- |
+| **Visual DAG Canvas** | **Implemented & Verified** | Live interactive `@xyflow/react` 12 canvas, port snapping, node inspector |
+| **Topological Execution Engine** | **Implemented & Verified** | Kahn's algorithm, cycle rejection, diamond DAG convergence verified via offline tests |
+| **Multi-Provider AI Failover** | **Implemented & Verified** | 4-provider cascade (Gemini &rarr; Groq &rarr; OpenAI &rarr; Mistral) with monotonic timeout budget |
+| **Default Gemini 3.8 Flash** | **Implemented & Verified** | Updated defaults across engine, templates, and UI; offline verified with Google v1beta schema |
+| **Legacy Model Normalization** | **Implemented & Verified** | `resolveGeminiModel` automatically upgrades deprecated `gemini-2.5-flash` at runtime |
+| **Direct Groq LPU Inference** | **Implemented & Verified** | Verified live via Groq API (`openai/gpt-oss-20b`, ~415ms); dedicated status badge in UI |
+| **Safe Condition Evaluator** | **Implemented & Verified** | 15 canonical comparison operators (29 token aliases), prototype pollution blocked (`__proto__`, `constructor`), zero `eval()` |
+| **Dynamic Action Transformations** | **Implemented & Verified** | JSON transformation via `interpolateObject`, field allowlist extraction, passthrough mode |
+| **Execution History & Rerun** | **Implemented & Verified** | Rerun preserves original trigger payload and records rerun lineage (`rerunFrom`) |
+| **Failed Execution Purge & Deletion** | **Implemented & Verified** | `DELETE /api/executions/:id` and `POST /api/executions/purge-failed` with IDOR isolation |
+| **Trace JSON Export** | **Implemented & Verified** | Redacted client-side JSON export of full execution traces |
+| **Network SSRF Protection** | **Implemented & Verified** | Private CIDR blocking (10.x, 192.168.x, 172.16.x, 127.x, 169.254.x), DNS rebinding guards |
+| **Deterministic Demo Fixtures** | **Implemented & Verified** | Non-billable simulated fixtures (`high-severity`, `low-severity`, `failover-recovery`) for $0 demos |
+| *External Slack/Discord Action Connectors* | *Planned Roadmap* | Pre-configured webhook connector presets for Slack and Discord |
+| *Asynchronous Worker Queue (BullMQ)* | *Planned Roadmap* | Decoupling long-running execution pipelines into background Redis queues |
+| *Distributed Scheduler (Redlock)* | *Planned Roadmap* | Distributed cron locking for multi-instance horizontal scaling |
+| *httpOnly Cookie Session Auth* | *Planned Roadmap* | Enhanced defense-in-depth cookie migration with refresh token rotation |
 
 ---
 
@@ -131,12 +170,12 @@ flowforge-ai/
   - **Webhook Trigger Node:** Ingests external HTTP events or manual JSON payloads.
   - **AI Processing Node:** Dispatches prompt templates to LLMs with upstream variable interpolation (`{{trigger.payload.service}}`) and structured JSON enforcement.
   - **Condition Node:** Evaluates incoming payload attributes and routes execution across dedicated `TRUE` and `FALSE` handles.
-  - **Action Node:** Deterministic data passthrough, header injection, and payload reshaping.
+  - **Action Node:** Deterministic data passthrough, JSON template reshaping, and field filtering.
   - **API Request Node:** Dispatches outbound HTTP/HTTPS requests with SSRF guards.
   - **Return Output Node:** Commits final pipeline state and aggregates upstream trace outputs.
 
 ### 2. Multi-Provider AI Failover Architecture
-- **Cascade Priority:** Google Gemini &rarr; Groq (`openai/gpt-oss-20b`) &rarr; OpenAI (`gpt-4o-mini`) &rarr; Mistral AI (`mistral-small-latest`).
+- **Cascade Priority:** Google Gemini (`gemini-3.8-flash`) &rarr; Groq (`openai/gpt-oss-20b`) &rarr; OpenAI (`gpt-4o-mini`) &rarr; Mistral AI (`mistral-small-latest`).
 - **Explicit Opt-In:** Failover is configured per AI node via `enableFailover: true`. Standard workflows retain single-provider execution.
 - **Monotonic Global Timeout Budget:** A single timeout deadline (default: 15,000 ms) governs all candidate attempts. Each attempt subtracts elapsed time; no attempt can overrun the remaining global budget.
 - **Error Classification:**
@@ -145,14 +184,17 @@ flowforge-ai/
 - **Graceful Key Skipping:** If an optional fallback API key is omitted on the server, the provider is cleanly skipped without throwing an exception or failing the workflow.
 
 #### 🛡️ AI Verification & Testing Disclosures (Honest Production Audit)
-- **Live-Verified Provider:** Standalone inference for Groq (`openai/gpt-oss-20b`) has been verified against Groq's official API endpoint, confirming sub-second generation and structured JSON parsing.
-- **Mock-Verified Failover Suite:** The full multi-provider failover cascade (Gemini 503 transient recovery &rarr; Groq, Gemini 404 model retirement &rarr; Groq, unconfigured key skipping, total cascade failure secret scrubbing, and 401 permanent error halts) has been verified via a 10/10 deterministic offline test suite (`scratch/test_gemini_to_groq_failover_final.mjs`) using guarded mock envelopes ($0 cost).
-- **Gemini Status Disclosure:** Google Gemini has **not** been live-verified against live production endpoints to prevent billable charges and quota consumption; all Gemini tests utilize offline mocked JSON response envelopes.
+- **Live-Verified Provider:** Standalone inference for Groq (`openai/gpt-oss-20b`) has been verified against Groq's official API endpoint, confirming sub-second generation (~415ms) and structured JSON parsing.
+- **Mock-Verified Failover Suite:** The multi-provider failover cascade (Gemini 503 transient recovery &rarr; Groq, Gemini 404 model retirement &rarr; Groq, unconfigured key skipping, total cascade failure secret scrubbing, and 401 permanent error halts) has been verified via 16 dedicated offline tests (`scratch/test_gemini_model_configuration.mjs`) using guarded mock envelopes ($0 cost).
+- **Gemini Status Disclosure:** Google Gemini `gemini-3.8-flash` request payloads, REST endpoints, and backward-compatible model normalizations are verified via offline tests conforming strictly to Google's official v1beta API schema.
 
-### 3. Visual Failover Cascade Viewer
-- **Polished Timeline Card:** Integrated directly into `ExecutionResultModal.jsx` and historical `Executions.jsx` trace drawers.
-- **Discrete Operational Badges:** Visualizes `Success • Recovered` (Emerald), `Model Unavailable (HTTP 404)` (Gold/Ruby), `Skipped • Unconfigured Key` (Warmgray), `Rate Limit (HTTP 429)` (Gold), and `Auth Error` (Ruby).
-- **Canvas Status Badges:** Updates node subtitles to display dynamic recovery paths (e.g. `gemini ➔ groq (openai/gpt-oss-20b)`) with a gold sparkle `Failover OK` runtime badge.
+### 3. Visual Failover Cascade Viewer & 4-Tab Node Inspector
+- **4-Tab Node Inspector:** Embedded in `ExecutionResultModal.jsx` and historical trace drawers with dedicated tabs:
+  1. *Output:* Final parsed JSON or text generated by the node.
+  2. *Input:* Aggregated parent data passed into the node.
+  3. *Telemetry:* Millisecond duration, token usage counts, and execution timestamps.
+  4. *AI Cascade:* Step-by-step attempt cards showing candidate providers, latencies, and HTTP status codes.
+- **Discrete Operational Badges:** Visualizes `Direct LPU Execution (Groq)` (Gold), `Primary Succeeded (Fallback Not Needed)` (Emerald), `Failover Resolved` (Gold), `Cascade Exhausted` (Ruby), and `Single-Provider Mode` (Muted Warmgray).
 - **Zero Secret Leaks:** Scrubbing pipeline redacts Bearer tokens, query parameter API keys (`key=[REDACTED]`), and local file paths before rendering in diagnostic error callouts.
 
 ### 4. Deterministic Execution & Selective Branch Skipping
@@ -161,106 +203,73 @@ flowforge-ai/
 - **Diamond DAG Convergence:** Re-joining DAG paths execute shared downstream nodes **exactly once** when reachable via the active path.
 
 ### 5. Safe Condition Evaluator Service
-- **14 Built-in Operators:** `equals`, `strict_equals`, `not_equals`, `greater_than`, `greater_than_or_equal`, `less_than`, `less_than_or_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `is_true`, `is_false`.
+- **15 Canonical Operators (29 Token Aliases):** Resolves standard comparison symbols and aliases (`==`, `===`, `!=`, `!==`, `>`, `>=`, `<`, `<=`, `eq`, `neq`, `gt`, `gte`, `lt`, `lte`) to 15 canonical evaluation routines: `equals`, `strict_equals`, `not_equals`, `greater_than`, `greater_than_or_equal`, `less_than`, `less_than_or_equal`, `contains`, `not_contains`, `starts_with`, `ends_with`, `is_empty`, `is_not_empty`, `is_true`, and `is_false`.
 - **Zero `eval()`:** No dynamic code evaluation or string-to-code execution.
 - **Prototype Pollution Prevention:** Explicitly blocks traversal into `__proto__`, `constructor`, and `prototype`.
 - **Safe Path Resolution:** Supports nested dot-notation (`structured.severity`) and bracket syntax (`items[0].id`).
 
 ### 6. Network Security & SSRF Defense-in-Depth
-- **CIDR Address Blocks:** Rejects IPv4 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`), and cloud metadata IP (`169.254.169.254`).
+- **CIDR Address Blocks:** Rejects IPv4 private ranges (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), loopback (`127.0.0.0/8`), IPv6 loopback (`::1`), and cloud metadata IP (`169.254.169.254`).
 - **DNS Rebinding Protection:** Pre-resolves target hostnames via `dns.promises.lookup` to ensure domains do not resolve to internal network IPs.
 - **Redirect Re-validation:** Validates target URLs upon every redirect hop (up to 5 redirects).
 - **Stream Bounds:** Outbound request bodies capped at 32 KB; response bodies bounded at 512 KB to prevent memory exhaustion.
 
 ### 7. Trigger Subsystems: Webhooks & Scheduling
-- **Token-Based Webhook Ingestion:** Ingests external payloads via `/api/workflows/webhook/:token` or `/api/webhooks/:token` with optional HMAC secret verification.
+- **Token-Based Webhook Ingestion:** Ingests external payloads via `/api/workflows/webhook/:token` or `/api/webhooks/:token` with unguessable tokens and optional HMAC secret verification.
 - **In-Memory Cron Scheduler:** Background scheduling via `node-cron` with overlap prevention, initializing active schedules on server boot.
-
----
-
-## 🔬 Concise Workflow Execution Example & Visual Previews
-
-### End-to-End Execution Trace Example: AI Incident Triage
-
-Below is an illustrative execution trace example demonstrating the flagship **AI Incident Triage & Smart Recovery** pipeline running with simulated failover recovery:
-
-#### 1. Inbound Webhook Payload (`Trigger Node`)
-```json
-{
-  "service": "payment-gateway",
-  "latencyP99Ms": 2450,
-  "errorRatePercent": 14.8,
-  "environment": "production",
-  "activeConnections": 1820
-}
-```
-
-#### 2. AI Reasoning & Failover Recovery (`AI Node`)
-```text
-Prompt Template:
-"Evaluate incident payload for {{trigger.payload.service}}.
-Latency: {{trigger.payload.latencyP99Ms}}ms, Error Rate: {{trigger.payload.errorRatePercent}}%.
-Output JSON schema: { severity: 'high' | 'low', escalate: boolean, reason: string, recommendedAction: string }"
-
-Attempt 1 [gemini / gemini-2.5-flash]: HTTP 503 Overloaded (42ms) -> Failover Initiated
-Attempt 2 [groq / openai/gpt-oss-20b]: HTTP 200 OK (312ms) -> Recovered Successfully
-
-Structured Output:
-{
-  "severity": "high",
-  "escalate": true,
-  "reason": "P99 latency of 2450ms exceeding 2000ms threshold with 14.8% error rate indicates severe downstream degradation.",
-  "recommendedAction": "Route alert to P1 on-call engineer and enable payment circuit breaker."
-}
-```
-
-#### 3. Deterministic Routing (`Condition Node`)
-```text
-Evaluation Rule: field 'structured.severity' equals 'high'
-Result: TRUE (Duration: 1ms)
-Routing Outcome:
-  ├── 'true'  handle -> Urgent Ops Dispatcher [EXECUTED (1ms)]
-  └── 'false' handle -> Routine Telemetry Logger [SKIPPED (0ms)]
-```
-
-#### 4. Committed Output Payload Example (`Output Node`)
-```json
-{
-  "status": "succeeded",
-  "workflowId": "670c56789abcdef012345678",
-  "durationMs": 356,
-  "failoverTriggered": true,
-  "finalProvider": "groq",
-  "finalModel": "openai/gpt-oss-20b",
-  "triageDecision": {
-    "severity": "high",
-    "escalate": true,
-    "dispatchedTo": "Urgent Ops Dispatcher",
-    "archived": false
-  }
-}
-```
-
-#### 📸 Visual Previews & Live UI
-- **Live Interactive Canvas:** Experience the full interactive DAG canvas, drag-and-drop nodes, and live simulator directly on the deployed app: **[https://flowforge-ai-ten.vercel.app](https://flowforge-ai-ten.vercel.app)**.
-- **Repository Cleanliness Note:** To keep the git commit history lightweight and prevent repository bloat, binary screenshot files are not tracked in git; all visual components are rendered live in React.
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technologies | Version / Notes |
-| :--- | :--- | :--- |
-| **Frontend Framework** | React | 19.2.8 (Vite 8.3 bundler) |
-| **Workflow Canvas** | `@xyflow/react` | 12.12.0 (React Flow) |
-| **Styling & Icons** | Tailwind CSS & Lucide React | Luxury palette: Obsidian Charcoal `#0B0D0C`, Champagne Gold `#E5B45B`, Emerald `#059669`, Ruby `#C83C3C`, Ivory `#F5F0E6` |
-| **Routing & HTTP** | React Router & Axios | React Router 7.18, Axios 1.20 with JWT token interceptors |
-| **Backend Runtime** | Node.js (ESM) | v24 LTS (native `fetch`, `AbortController`) |
-| **Web Server** | Express | 4.21.2 |
-| **Database & ODM** | MongoDB Atlas & Mongoose | Mongoose 8.9.5 |
-| **Security & Auth** | bcryptjs & jsonwebtoken | JWT Bearer authentication, 10-round bcrypt salt |
-| **Rate Limiting** | express-rate-limit | MemoryStore, per-route IP tracking with IPv6 subnet normalization |
-| **Scheduling** | node-cron | 4.6.0 |
+| Layer | Technologies | Version / Notes | Core Architectural Responsibilities |
+| :--- | :--- | :--- | :--- |
+| **Frontend Framework** | React | 19.2.8 (Vite 8.3 bundler) | Component rendering, state synchronization, client-side routing |
+| **Workflow Canvas** | `@xyflow/react` | 12.12.0 (React Flow) | Node rendering, edge wiring, interactive pan/zoom canvas, handle ports |
+| **Styling & Icons** | Tailwind CSS & Lucide React | Charcoal `#0B0D0C`, Gold `#E5B45B`, Emerald `#059669` | Design token system, responsive utility classes, iconography |
+| **Client HTTP & State** | Axios & React Router | Axios 1.20, React Router 7.18 | Centralized request/response interceptors, auth token injection, route guards |
+| **Backend Runtime** | Node.js (ESM) | v24 LTS | Native `fetch`, `AbortController`, streaming HTTP parsers |
+| **Web Server** | Express | 4.21.2 | RESTful routing, middleware orchestration, proxy trust configuration |
+| **Database & ODM** | MongoDB Atlas & Mongoose | Mongoose 8.9.5 | Managed document persistence, schema constraints, indexing, transactions |
+| **Security & Auth** | bcryptjs & jsonwebtoken | 10-round bcrypt salt, HMAC-SHA256 JWT | Password hashing, stateless bearer token creation and verification |
+| **Rate Limiting** | express-rate-limit | MemoryStore with IPv6 normalization | DoS and brute-force mitigation on auth and execution endpoints |
+| **Cron Scheduling** | node-cron | 4.6.0 | In-process cron job scheduling, timezone support, lifecycle registration |
+
+---
+
+## 🎯 Flagship Interview Demo: AI Incident Triage & Smart Recovery
+
+For a 2–3 minute technical interview walkthrough, demonstrate the **AI Incident Triage & Smart Recovery** blueprint:
+
+```mermaid
+flowchart LR
+    Trigger["Webhook Alert Ingestion\n(service: payment-gateway)"] --> AI["AI Incident Triage\n(gemini-3.8-flash / failover: ON)"]
+    AI --> Condition{"High Severity Branch\n(structured.severity == 'high')"}
+    Condition -- "TRUE" --> ActionHigh["Urgent Ops Dispatcher\n(Route to On-Call P1)"]
+    Condition -- "FALSE" --> ActionLow["Routine Telemetry Logger\n(Archive Standard Event)"]
+    ActionHigh --> Output["Incident Resolution Output\n(HTTP 200 Response)"]
+    ActionLow --> Output
+```
+
+### Verified Demo Fixture Scenarios ($0 Cost)
+FlowForge AI includes built-in deterministic demo fixtures for technical interviews, allowing full pipeline demonstrations without requiring live billing:
+
+1. **Scenario A: High Severity Incident (`TRUE` Branch)**
+   - **Input:** `{ service: "payment-gateway", latencyP99Ms: 2450, errorRatePercent: 14.8 }`
+   - **AI Node Output:** `{ severity: "high", reason: "Database pool exhausted", recommendedAction: "Trigger PagerDuty P1" }`
+   - **Condition Evaluation:** `structured.severity` equals `'high'` &rarr; **`TRUE`**
+   - **Execution Path:** `Urgent Ops Dispatcher` executes; `Routine Telemetry Logger` is marked **Skipped (`0ms`)**.
+
+2. **Scenario B: Low Severity Routine Telemetry (`FALSE` Branch)**
+   - **Input:** `{ service: "auth-service", latencyP99Ms: 120, errorRatePercent: 0.1 }`
+   - **AI Node Output:** `{ severity: "low", reason: "Nominal operational telemetry", recommendedAction: "Archive to routine ledger" }`
+   - **Condition Evaluation:** `structured.severity` equals `'high'` &rarr; **`FALSE`**
+   - **Execution Path:** `Routine Telemetry Logger` executes; `Urgent Ops Dispatcher` is marked **Skipped (`0ms`)**.
+
+3. **Scenario C: Multi-Provider Failover Recovery**
+   - **Primary Attempt:** Gemini encounters HTTP 503 or model retirement HTTP 404 &rarr; Failover initiated.
+   - **Fallback Attempt:** Groq LPU recovers with HTTP 200 in ~312ms.
+   - **Telemetry:** Execution trace displays candidate attempts, durations, and dynamic recovery path badge `gemini ➔ groq (openai/gpt-oss-20b)`.
 
 ---
 
@@ -318,7 +327,7 @@ Routing Outcome:
 
 ## ⚙️ Environment Variables
 
-### Backend (`server/.env`)
+### Backend Configuration (`server/.env`)
 Use `server/.env.example` as a template:
 
 ```env
@@ -356,7 +365,28 @@ OPENAI_DEFAULT_MODEL=gpt-4o-mini
 MISTRAL_DEFAULT_MODEL=mistral-small-latest
 ```
 
-### Frontend (`client/.env`)
+| Variable Name | Required | Default / Example Purpose |
+| :--- | :---: | :--- |
+| `PORT` | Optional | Port for Express server (default: `5000`) |
+| `NODE_ENV` | Optional | Runtime mode: `development` or `production` |
+| `MONGODB_URI` | **Required** | MongoDB connection string (Atlas or local) |
+| `JWT_SECRET` | **Required** | High-entropy secret key for signing auth tokens |
+| `JWT_EXPIRES_IN` | Optional | JWT lifetime (e.g. `1d`, `7d`) |
+| `CLIENT_ORIGIN` | **Required in Prod** | Comma-separated allowlist of origins permitted by CORS |
+| `AUTH_RATE_LIMIT_WINDOW_MS` | Optional | Window in ms for authentication rate limiting |
+| `AUTH_RATE_LIMIT_MAX` | Optional | Max auth requests permitted per window |
+| `EXECUTION_RATE_LIMIT_WINDOW_MS`| Optional | Window in ms for execution rate limiting |
+| `EXECUTION_RATE_LIMIT_MAX` | Optional | Max execution requests permitted per window |
+| `AI_PROVIDER` | Optional | Default primary provider (`gemini`) |
+| `GEMINI_DEFAULT_MODEL` | Optional | Default Gemini model (`gemini-3.8-flash`) |
+| `GEMINI_API_KEY` | Optional | API key for Google Gemini inference |
+| `GROQ_API_KEY` | Optional | API key for Groq LPU inference |
+| `OPENAI_API_KEY` | Optional | API key for OpenAI inference |
+| `MISTRAL_API_KEY` | Optional | API key for Mistral AI inference |
+
+*Note: AI provider API keys are strictly server-side credentials and are never sent to or accessible by the browser client.*
+
+### Frontend Configuration (`client/.env`)
 Use `client/.env.example` as a template:
 
 ```env
@@ -364,12 +394,16 @@ Use `client/.env.example` as a template:
 VITE_API_BASE_URL=http://localhost:5000/api
 ```
 
+| Variable Name | Required | Description |
+| :--- | :---: | :--- |
+| `VITE_API_BASE_URL` | Optional | Public URL of backend API (e.g. `http://localhost:5000/api` or production endpoint) |
+
 ---
 
 ## 🚀 Local Installation & Setup
 
 ### Prerequisites
-- **Node.js**: `>= 20.0.0` (Node.js 24 LTS verified)
+- **Node.js**: `>= 20.0.0` (Node.js 24 LTS recommended)
 - **npm**: `>= 10.0.0`
 - **MongoDB**: Active MongoDB Atlas cluster or local MongoDB instance
 
@@ -392,7 +426,7 @@ npm run dev
 
 ### Step 3: Setup & Start Frontend Client
 ```bash
-# In a new terminal window:
+# In a separate terminal:
 cd client
 npm install
 cp .env.example .env
@@ -416,70 +450,81 @@ npm run dev
 
 ---
 
+## 🌐 Deployment Overview: Vercel, Render & MongoDB Atlas
+
+FlowForge AI is deployed using a decoupled, production-verified cloud architecture:
+
+### 1. Frontend: Vercel SPA
+- **Hosting URL:** `https://flowforge-ai-ten.vercel.app`
+- **Configuration:** `client/vercel.json` provides standard Single Page Application rewrite rules mapping `/(.*)` to `/index.html`.
+- **Environment:** `VITE_API_BASE_URL` is configured to point directly to Render backend (`https://flowforge-ai-api-hj63.onrender.com/api`).
+- **CI/CD:** Pushes to `main` trigger automated Vite builds and global edge CDN deployment.
+
+### 2. Backend: Render Web Service
+- **Hosting URL:** `https://flowforge-ai-api-hj63.onrender.com`
+- **Configuration:** Node.js Web Service running `npm start`. Configured with `app.set('trust proxy', 1)` to correctly inspect client IP addresses behind Cloudflare/Render reverse proxies.
+- **CORS Allowlist:** `CLIENT_ORIGIN` is configured to restrict browser cross-origin requests strictly to `https://flowforge-ai-ten.vercel.app`.
+- **Health Verification:** Public probe available at `/api/health`, returning JSON readiness status and MongoDB connection state.
+
+### 3. Database: MongoDB Atlas
+- **Storage:** Managed MongoDB Atlas replica set.
+- **Connection Security:** Mongoose connection string configured with secure TLS/SSL, DNS SRV resolution fallback, and IP access allowlisting.
+
+---
+
 ## 🧪 Automated Testing & Verification Suite
 
 FlowForge AI includes an automated offline test harness covering security boundaries, graph execution semantics, multi-provider failover cascades, and data sanitization.
 
 ### Execution Commands
 ```bash
-# Run the complete Gemini-to-Groq failover verification suite (10 offline scenarios):
-node scratch/test_gemini_to_groq_failover_final.mjs
+# Run Gemini model configuration & error handling policy suite (16 tests):
+node scratch/test_gemini_model_configuration.mjs
 
-# Run mock failover pipeline verification (6 tests - Gemini 404 cascade, rate limits, fatal errors):
-node scratch/smoke_test_failover_pipeline.mjs
+# Run backend AI executor service comprehensive suite (82 tests):
+node scratch/test_ai_executor.mjs
 
-# Run Groq production hardening test suite (11 tests - model parsing, JSON mode, headers):
-node scratch/test_groq_production_hardening.mjs
+# Run dynamic template interpolation & action node suite (15 tests):
+node scratch/test_template_interpolation_and_action_nodes.mjs
 
-# Run production readiness audit suite (10 tests - closures, SSRF filters, IPv6 limiter):
-node scratch/test_final_readiness_audit.mjs
+# Run workflow duplication & ID remapping verification (7 tests):
+node scratch/test_workflow_duplication_remapping.mjs
 
-# Run visual failover cascade logic & sanitization suite:
-node scratch/test_failover_viewer_logic.mjs
+# Run security deep verification & SSRF protection suite (22 tests):
+node scratch/test_dynamic_data_flow_and_security_deep_verification.mjs
 
-# Run documentation & Mermaid syntax validation suite:
+# Run AI fallback visibility & Groq badge telemetry suite (9 tests):
+node scratch/test_ai_fallback_visibility.mjs
+
+# Run documentation & Mermaid syntax verification (17 checks):
 node scratch/test_documentation_verification.mjs
 
-# Run landing page copy & flagship blueprint DAG validation:
-node scratch/test_landing_and_blueprint.mjs
-
 # Run client production build verification:
-cd client && npm run build
+npm --prefix client run build
 ```
 
 ### Verified Test Results Summary
 | Test Suite | Focus Area | Verified Scope | Result |
 | :--- | :--- | :---: | :---: |
-| `test_gemini_to_groq_failover_final.mjs` | Primary success, 503 recovery, 404 model retirement policy, missing keys, secret redaction | 10 Scenarios | **10 / 10 PASSED** |
-| `test_groq_production_hardening.mjs` | Default model `openai/gpt-oss-20b`, JSON system injection, plain-text headers, sanitization | 11 Tests | **11 / 11 PASSED** |
-| `test_final_readiness_audit.mjs` | Render purity, hook stale closures, SSRF CIDR rejection, IPv6 rate limiting | 10 Tests | **10 / 10 PASSED** |
-| `smoke_test_failover_pipeline.mjs` | Multi-provider failover, Gemini 404 cascade to Groq, fatal 401/safety halts | 6 Tests | **6 / 6 PASSED** |
-| `test_failover_viewer_logic.mjs` | Status badge mappings, Bearer token redaction, path stripping, legacy null checks | 8 Tests | **8 / 8 PASSED** |
+| `test_gemini_model_configuration.mjs` | Default `gemini-3.8-flash`, legacy normalization, Groq isolation, 404/401/429/503 policies | 16 Tests | **16 / 16 PASSED** |
+| `test_ai_executor.mjs` | SSRF prevention, URL sanitization, prompt interpolation, token telemetry, error handling | 82 Tests | **82 / 82 PASSED** |
+| `test_template_interpolation_and_action_nodes.mjs` | Variable resolution, type preservation, action transform/filter/passthrough, prototype guards | 15 Tests | **15 / 15 PASSED** |
+| `test_workflow_duplication_remapping.mjs` | Node/edge UUID remapping, document cloning, cross-user IDOR isolation | 7 Tests | **7 / 7 PASSED** |
+| `test_dynamic_data_flow_and_security_deep_verification.mjs` | SSRF CIDR filters (10.x, 192.168.x, 169.254.x), prototype pollution, secondary injection | 22 Tests | **22 / 22 PASSED** |
+| `test_ai_fallback_visibility.mjs` | Groq direct badge, fallback recovery, skipped provider, secret redaction | 9 Tests | **9 / 9 PASSED** |
 | `test_documentation_verification.mjs` | Section completeness, Mermaid syntax, relative link integrity, secret placeholder check | 17 Checks | **17 / 17 PASSED** |
-| `test_landing_and_blueprint.mjs` | Landing page copy accuracy, zero stale model references, blueprint DAG validity | 5 Tests | **5 / 5 PASSED** |
-| `client: npm run build` | Vite 8.3 production bundling, CSS minification, syntax validation | 2,144 Modules | **BUILT IN 1.58s (0 Errors)** |
-
----
-
-## 🎯 Flagship Interview Demo: AI Incident Triage & Smart Recovery
-
-For a 2–3 minute technical interview walkthrough, demonstrate the **AI Incident Triage & Smart Recovery** blueprint:
-
-1. **Topology:** `Webhook Alert Ingestion` &rarr; `AI Incident Triage` &rarr; `High Severity Branch` &rarr; `Urgent Ops Dispatcher` &rarr; `Incident Resolution Output`.
-2. **Deterministic Routing:** When incoming error telemetry (`latencyP99Ms: 2450`, `errorRatePercent: 14.8`) is analyzed by the AI node, it outputs structured JSON `{ severity: "high", reason: "...", recommendedAction: "..." }`. The condition node evaluates `field: 'structured.severity' equals 'high'` &rarr; activates the urgent ops branch &rarr; marks the routine logger **Skipped**.
-3. **Failover Resilience:** The AI node has `enableFailover: true`. If Gemini returns an upstream model retirement notice (HTTP 404) or overload (HTTP 503), the engine cascades sequentially to Groq (`openai/gpt-oss-20b`) within the monotonic timeout budget.
-4. **Visual Observability:** Open the execution modal or trace drawer to show the **Visual Failover Cascade Viewer**, pointing out the candidate attempt timeline, duration in ms, discrete status pills, and sanitized diagnostic reasons.
-
-*See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md#6-flagship-demo-guide-ai-incident-triage--smart-recovery) for step-by-step interview talking points.*
+| `client: npm run build` | Vite 8.3 production bundling, CSS minification, syntax validation | 2,145 Modules | **BUILT IN 1.35s (0 Errors)** |
 
 ---
 
 ## 🔒 Security Considerations & Honest Disclosures
 
-1. **Live Fallback Credentials:** Multi-provider fallback execution requires server environment keys (e.g. `GROQ_API_KEY`). When optional fallback keys are absent, the executor cleanly skips unconfigured providers without crashing and reports the primary result in the cascade timeline.
-2. **In-Memory Rate Limiting:** `express-rate-limit` tracks IP counters in Node.js process memory with IPv6 subnet normalization. For distributed multi-instance clusters, configure a shared Redis store via `rate-limit-redis`.
-3. **In-Memory Scheduler:** Scheduled triggers (`node-cron`) run in-process. In horizontally scaled container environments, duplicate execution prevention requires a distributed lock (e.g., Redis Redlock) or dedicated task queue (e.g., BullMQ).
-4. **JWT Storage:** Auth tokens are stored in browser `localStorage`. For environments requiring strict XSS immunity, migrating to `httpOnly`, `SameSite=Strict` cookies is recommended.
+1. **Ephemeral Hosting & Cold Starts:** On free-tier cloud hosting (e.g. Render), backend instances spin down after inactivity. The initial request may take 30–50 seconds to wake the service. Setting up a free external ping monitor (e.g. Cron-Job.org or BetterStack) targeting `/api/health` every 10 minutes keeps the container warm.
+2. **Synchronous Execution Pipeline Timeout Risk:** Workflows execute synchronously within the Express HTTP request cycle. Complex multi-step pipelines with multiple retries can approach cloud gateway limits (15–30s on Render/Vercel). Migrating long-running pipelines to an asynchronous background worker queue (e.g. BullMQ / Redis) is planned for enterprise scaling.
+3. **In-Memory Rate Limiting:** `express-rate-limit` tracks IP counters in Node.js process memory with IPv6 subnet normalization. For distributed multi-instance clusters, configuring a shared Redis store via `rate-limit-redis` is recommended.
+4. **In-Memory Scheduler:** Scheduled triggers (`node-cron`) run in-process. In horizontally scaled container environments, duplicate execution prevention requires a distributed lock (e.g. Redis Redlock).
+5. **JWT Storage:** Auth tokens are stored in browser `localStorage`. For environments requiring strict XSS immunity, migrating to `httpOnly`, `SameSite=Strict` cookies with CSRF tokens is recommended.
+6. **Live Fallback Credentials:** Multi-provider fallback execution requires server environment keys (e.g. `GROQ_API_KEY`). When optional fallback keys are absent, the executor cleanly skips unconfigured providers without crashing and reports the primary result in the cascade timeline.
 
 ---
 
@@ -491,7 +536,7 @@ For a 2–3 minute technical interview walkthrough, demonstrate the **AI Inciden
 • Engineered a deterministic DAG execution engine featuring Kahn's topological sort algorithm, cycle detection, selective branch skipping, and diamond dependency convergence.
 • Implemented a resilient 4-provider AI failover cascade (Google Gemini → Groq → OpenAI → Mistral AI) with a monotonic timeout budget, exponential backoff with jitter, and automatic key-skipping.
 • Built an interactive React Flow canvas with custom nodes, contextual properties inspector, and a Visual Failover Cascade Viewer rendering millisecond-level step telemetry and scrubbed diagnostics.
-• Fortified platform security with SSRF prevention (private CIDR blocks, DNS rebinding guards, redirect re-validation), prototype-pollution-free condition evaluation (14 operators), and multi-tenant IDOR defense.
+• Fortified platform security with SSRF prevention (private CIDR blocks, DNS rebinding guards, redirect re-validation), prototype-pollution-free condition evaluation (15 canonical operators / 29 aliases), and multi-tenant IDOR defense.
 ```
 
 ---
@@ -499,4 +544,4 @@ For a 2–3 minute technical interview walkthrough, demonstrate the **AI Inciden
 ## 📄 License & Documentation
 
 - **Architecture Deep-Dive:** Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for module specifications, execution flow sequence diagrams, and security boundary implementations.
-- **License:** Distributed under the MIT License.
+- **License:** Distributed under the [MIT License](https://opensource.org/licenses/MIT).
