@@ -208,6 +208,7 @@ export const sanitizeSecretsInString = (text) => {
   // Scrub any active environment keys if present as literal substrings
   const activeKeys = [
     process.env.GEMINI_API_KEY,
+    process.env.AI_API_KEY,
     process.env.GROQ_API_KEY,
     process.env.OPENAI_API_KEY,
     process.env.MISTRAL_API_KEY
@@ -252,17 +253,35 @@ export const validateProviderEndpoint = async (rawUrl) => {
   // Check against approved hosts
   const allowedHosts = new Set(APPROVED_HTTPS_HOSTS);
 
-  // If server configured custom OPENAI_BASE_URL or AI_ALLOWED_HOSTS, dynamically allow its hostname
-  if (process.env.OPENAI_BASE_URL) {
-    try {
-      const customUrl = new URL(process.env.OPENAI_BASE_URL);
-      allowedHosts.add(customUrl.hostname.toLowerCase());
-    } catch {}
+  // If server configured custom base URLs, dynamically allow their hostnames
+  // ONLY if they use HTTPS and pass SSRF validation (never localhost or private IPs)
+  const customBaseUrls = [
+    process.env.OPENAI_BASE_URL,
+    process.env.GROQ_BASE_URL,
+    process.env.MISTRAL_BASE_URL
+  ];
+
+  for (const rawBaseUrl of customBaseUrls) {
+    if (rawBaseUrl && typeof rawBaseUrl === 'string' && rawBaseUrl.trim()) {
+      try {
+        const parsedBase = new URL(rawBaseUrl.trim());
+        if (parsedBase.protocol === 'https:') {
+          const baseHostname = parsedBase.hostname.toLowerCase();
+          const baseSsrf = await validateUrlForSsrf(rawBaseUrl.trim());
+          if (baseSsrf.isAllowed) {
+            allowedHosts.add(baseHostname);
+          }
+        }
+      } catch {}
+    }
   }
+
   if (process.env.AI_ALLOWED_HOSTS) {
     const extraHosts = process.env.AI_ALLOWED_HOSTS.split(',').map((h) => h.trim().toLowerCase());
     for (const h of extraHosts) {
-      if (h) allowedHosts.add(h);
+      if (h && !['localhost', '127.0.0.1', '::1', '0.0.0.0'].includes(h)) {
+        allowedHosts.add(h);
+      }
     }
   }
 
@@ -457,10 +476,74 @@ export const isRetryableError = (status, err = null) => {
   if (typeof status === 'number' && RETRYABLE_HTTP_STATUSES.has(status)) {
     return true;
   }
-  if (err && (err.name === 'TypeError' || err.code === 'ECONNRESET' || err.code === 'ETIMEDOUT')) {
+  if (err && (
+    err.name === 'TypeError' ||
+    err.code === 'ECONNRESET' ||
+    err.code === 'ETIMEDOUT' ||
+    err.code === 'ENOTFOUND' ||
+    err.code === 'EAI_AGAIN'
+  )) {
     return true;
   }
   return false;
+};
+
+/**
+ * Safely extracts human-readable error messages from diverse provider error envelopes.
+ * Supports OpenAI/Groq ({ error: { message } }), Gemini ({ error: { message, status } }),
+ * Mistral/FastAPI ({ detail: [{ msg, loc }] } or { detail: "..." }), and flat strings.
+ * @param {string} responseText
+ * @returns {string}
+ */
+export const extractErrorMessageFromPayload = (responseText) => {
+  if (!responseText || typeof responseText !== 'string') return '';
+  try {
+    const parsed = JSON.parse(responseText);
+    if (parsed.error?.message && typeof parsed.error.message === 'string') {
+      return parsed.error.message;
+    }
+    if (typeof parsed.error === 'string') {
+      return parsed.error;
+    }
+    if (parsed.message && typeof parsed.message === 'string') {
+      return parsed.message;
+    }
+    if (Array.isArray(parsed.detail) && parsed.detail.length > 0) {
+      const messages = parsed.detail
+        .map((item) => {
+          if (!item) return '';
+          if (typeof item === 'string') return item;
+          if (typeof item === 'object') {
+            if (item.msg && typeof item.msg === 'string') {
+              const loc = Array.isArray(item.loc) && item.loc.length > 0 ? ` (${item.loc.join('.')})` : '';
+              return `${item.msg}${loc}`;
+            }
+            if (item.message && typeof item.message === 'string') {
+              return item.message;
+            }
+          }
+          return '';
+        })
+        .filter(Boolean);
+      if (messages.length > 0) {
+        return messages.join('; ');
+      }
+    }
+    if (typeof parsed.detail === 'string') {
+      return parsed.detail;
+    }
+    if (parsed.detail && typeof parsed.detail === 'object') {
+      if (parsed.detail.message && typeof parsed.detail.message === 'string') {
+        return parsed.detail.message;
+      }
+      if (parsed.detail.msg && typeof parsed.detail.msg === 'string') {
+        return parsed.detail.msg;
+      }
+    }
+    return '';
+  } catch {
+    return responseText.slice(0, 200);
+  }
 };
 
 /**
@@ -474,77 +557,33 @@ export const formatProviderError = (status, responseText, providerName) => {
   if (status === 401 || status === 403) {
     return `AI provider authentication failed (HTTP ${status}). Verify that your server API key is configured correctly.`;
   }
+
+  const extractedMsg = extractErrorMessageFromPayload(responseText);
+  const safeMsg = sanitizeSecretsInString(extractedMsg);
+
   if (status === 429) {
-    let extractedMsg = '';
-    if (responseText) {
-      try {
-        const parsed = JSON.parse(responseText);
-        extractedMsg =
-          parsed.error?.message ||
-          parsed.message ||
-          (typeof parsed.error === 'string' ? parsed.error : '');
-      } catch {
-        extractedMsg = responseText.slice(0, 200);
-      }
-    }
-    const safeMsg = sanitizeSecretsInString(extractedMsg);
     return safeMsg
       ? `AI provider rate limit reached (HTTP 429): ${safeMsg}. Please retry after cooldown.`
       : `AI provider rate limit reached (HTTP 429). Please retry after cooldown.`;
   }
   if (status === 404) {
-    let extractedMsg = '';
-    if (responseText) {
-      try {
-        const parsed = JSON.parse(responseText);
-        extractedMsg =
-          parsed.error?.message ||
-          parsed.message ||
-          (typeof parsed.error === 'string' ? parsed.error : '');
-      } catch {
-        extractedMsg = responseText.slice(0, 200);
-      }
-    }
-    const safeMsg = sanitizeSecretsInString(extractedMsg);
     return `AI model not found or unsupported by provider (HTTP 404). ${safeMsg || 'Verify that the configured model name is valid and supported by your API key tier.'}`;
   }
   if (status >= 500) {
-    let extractedMsg = '';
     let extractedStatus = '';
     if (responseText) {
       try {
         const parsed = JSON.parse(responseText);
-        extractedMsg =
-          parsed.error?.message ||
-          parsed.message ||
-          (typeof parsed.error === 'string' ? parsed.error : '');
         if (parsed.error?.status) {
           extractedStatus = ` - ${parsed.error.status}`;
         }
-      } catch {
-        extractedMsg = responseText.slice(0, 200);
-      }
+      } catch {}
     }
-    const safeMsg = sanitizeSecretsInString(extractedMsg);
     return safeMsg
       ? `AI provider upstream service error (HTTP ${status}${extractedStatus}): ${safeMsg}`
       : `AI provider upstream service error (HTTP ${status}). The service may be temporarily unavailable.`;
   }
 
-  let extractedMsg = '';
-  if (responseText) {
-    try {
-      const parsed = JSON.parse(responseText);
-      extractedMsg =
-        parsed.error?.message ||
-        parsed.message ||
-        (typeof parsed.error === 'string' ? parsed.error : '');
-    } catch {
-      extractedMsg = responseText.slice(0, 200);
-    }
-  }
-
-  const safeMsg = sanitizeSecretsInString(extractedMsg);
   return safeMsg
     ? `AI provider rejected request (HTTP ${status}): ${safeMsg}`
     : `AI provider request failed with HTTP ${status}.`;
@@ -554,8 +593,14 @@ export const formatProviderError = (status, responseText, providerName) => {
  * Executes Google Gemini REST API request
  */
 const executeGeminiRequest = async (config, options) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || !apiKey.trim()) {
+  // Explicit precedence for GEMINI_API_KEY; legacy AI_API_KEY used only as a documented fallback for Gemini
+  const apiKey = (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim())
+    ? process.env.GEMINI_API_KEY.trim()
+    : (process.env.AI_API_KEY && process.env.AI_API_KEY.trim())
+      ? process.env.AI_API_KEY.trim()
+      : null;
+
+  if (!apiKey) {
     return {
       success: false,
       error: 'AI execution failed: GEMINI_API_KEY is not configured in server environment variables.',
@@ -841,7 +886,8 @@ const executeOpenAiRequest = async (config, options) => {
   }
 
   const model = config.model || defaultModel;
-  const endpointUrl = `${baseUrl}/chat/completions`;
+  const cleanBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
+  const endpointUrl = `${cleanBaseUrl}/chat/completions`;
   const sanitizedEndpoint = sanitizeUrl(endpointUrl);
 
   const endpointValidation = await validateProviderEndpoint(endpointUrl);
@@ -993,6 +1039,15 @@ const executeOpenAiRequest = async (config, options) => {
         return {
           success: false,
           error: 'AI provider returned empty choices in response.',
+          durationMs: Date.now() - overallStartTime,
+          attempts: attemptCount
+        };
+      }
+
+      if (choice.finish_reason === 'content_filter') {
+        return {
+          success: false,
+          error: 'AI response generation was blocked by provider safety filter.',
           durationMs: Date.now() - overallStartTime,
           attempts: attemptCount
         };
@@ -1164,7 +1219,10 @@ export const executeWithFailover = async (config, options) => {
     // 2. Check credentials
     let hasKey = false;
     if (candidate.provider === 'gemini') {
-      hasKey = !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim());
+      hasKey = !!(
+        (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()) ||
+        (process.env.AI_API_KEY && process.env.AI_API_KEY.trim())
+      );
     } else if (candidate.provider === 'groq') {
       hasKey = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim());
     } else if (candidate.provider === 'mistral') {
@@ -1257,7 +1315,9 @@ export const executeWithFailover = async (config, options) => {
         result.error.includes('AI provider connection error') ||
         result.error.includes('fetch failed') ||
         result.error.includes('ECONNRESET') ||
-        result.error.includes('ETIMEDOUT')
+        result.error.includes('ETIMEDOUT') ||
+        result.error.includes('ENOTFOUND') ||
+        result.error.includes('EAI_AGAIN')
       ));
 
     // Provider-specific model availability error (HTTP 404)

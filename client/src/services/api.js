@@ -117,10 +117,11 @@ export const loginUser = async (credentials) => {
 
 /**
  * Authenticate or register a user via Google ID token credential
+ * Uses a request-specific 45s timeout to safely accommodate cloud cold starts and JWKS cert retrieval.
  * @param {{ idToken?: string, credential?: string }} data
  */
 export const googleLoginUser = async (data) => {
-  const response = await api.post('/auth/google', data);
+  const response = await api.post('/auth/google', data, { timeout: 45000 });
   return response.data;
 };
 
