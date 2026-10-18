@@ -6,7 +6,7 @@ export const BUILT_IN_TEMPLATES = [
     category: 'AI & Automation',
     badge: 'Multi-Provider AI',
     badgeColor: 'text-[#E5B45B] bg-[#E5B45B]/10 border-[#E5B45B]/20',
-    description: 'Ingests system incident telemetry, evaluates severity with Google Gemini (with optional 4-provider failover to Groq, OpenAI, or Mistral), and branches critical alerts for priority escalation.',
+    description: 'Ingests system incident telemetry, evaluates severity with Google Gemini (with optional failover to Groq or OpenRouter), and branches critical alerts for priority escalation.',
     nodeCount: 6,
     edgeCount: 6,
     flowPreview: ['Webhook Alert', 'AI Anomaly Triage', 'Severity Rule', 'Escalation Action', 'Resolution Output'],

@@ -152,8 +152,8 @@ export default function Home() {
                 <Sparkles className="w-4 h-4" />
               </div>
               <div className="min-w-0">
-                <span className="text-[11px] font-mono text-[#E5B45B] font-bold block uppercase tracking-wider">4-Provider Failover</span>
-                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Gemini, Groq, OpenAI &amp; Mistral</span>
+                <span className="text-[11px] font-mono text-[#E5B45B] font-bold block uppercase tracking-wider">Multi-Provider Failover</span>
+                <span className="text-[11px] text-[#B9B0A0] leading-tight block mt-0.5">Gemini, Groq &amp; OpenRouter</span>
               </div>
             </div>
 
@@ -627,11 +627,11 @@ export default function Home() {
             </div>
             <h3 className="text-base font-bold text-[#F5F0E6]">Multi-Provider AI Reasoning</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Powered by Google Gemini (gemini-3.8-flash) with optional automatic failover to Groq, OpenAI, or Mistral AI. Ingests context variables, enforces structured JSON output, and computes token telemetry.
+              Powered by Google Gemini (gemini-3.8-flash) with optional automatic failover to Groq or OpenRouter. Ingests context variables, enforces structured JSON output, and computes token telemetry.
             </p>
             <div className="flex flex-wrap gap-1.5 pt-1">
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#E5B45B] border border-[rgba(185,176,160,0.1)]">
-                4-Provider Failover
+                Multi-Provider Failover
               </span>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
                 Structured JSON
@@ -763,7 +763,7 @@ export default function Home() {
             </span>
             <h3 className="text-lg font-bold text-[#F5F0E6]">Configure AI &amp; Logic Rules</h3>
             <p className="text-xs text-[#B9B0A0] leading-relaxed">
-              Define prompts with variable injection, choose Google Gemini, Groq, OpenAI, or Mistral AI models, and define Boolean, numerical, or regex comparison rules.
+              Define prompts with variable injection, choose Google Gemini, Groq, OpenAI, or OpenRouter models, and define Boolean, numerical, or regex comparison rules.
             </p>
             <ul className="space-y-1.5 pt-2 text-xs text-[#B9B0A0]">
               <li className="flex items-center space-x-2">
@@ -893,15 +893,15 @@ export default function Home() {
             },
             {
               q: "What workflow nodes are currently implemented and supported?",
-              a: "The platform natively provides six core node types: Trigger nodes (webhook alert and scheduled entrypoints), AI Processing nodes (LLM reasoning across Gemini, Groq, OpenAI, and Mistral), Condition nodes (deterministic comparison rules with true/false path splitting), Action nodes (data passthrough and payload mapping), API Request nodes (outbound HTTP requests with SSRF guards), and Return Output nodes (HTTP response and state commitment)."
+              a: "The platform natively provides six core node types: Trigger nodes (webhook alert and scheduled entrypoints), AI Processing nodes (LLM reasoning across Gemini, Groq, OpenAI, and OpenRouter), Condition nodes (deterministic comparison rules with true/false path splitting), Action nodes (data passthrough and payload mapping), API Request nodes (outbound HTTP requests with SSRF guards), and Return Output nodes (HTTP response and state commitment)."
             },
             {
               q: "Which AI models and providers can I configure?",
-              a: "FlowForge AI defaults to Google's verified gemini-3.8-flash model, providing sub-second inference with structured JSON formatting. It also supports Groq (openai/gpt-oss-20b), OpenAI (gpt-4o-mini), and Mistral AI (mistral-small-latest), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
+              a: "FlowForge AI defaults to Google's verified gemini-3.8-flash model, providing sub-second inference with structured JSON formatting. It also supports Groq (openai/gpt-oss-20b), OpenAI (gpt-4o-mini), and OpenRouter (google/gemma-4-31b-it:free), with optional multi-provider automatic failover cascade where fallback credentials are configured on the server."
             },
             {
               q: "How does automatic AI failover work, and what are its prerequisites?",
-              a: "Automatic failover is an opt-in toggle on each AI node. When enabled, if the primary model encounters a provider deprecation (HTTP 404) or rate limit (HTTP 429), the engine cascades sequentially to Groq, OpenAI, and Mistral within a single monotonic timeout budget. Providers without configured server environment keys (e.g. GROQ_API_KEY) are cleanly bypassed without halting the workflow, and full attempt telemetry is logged in the Visual Failover Cascade Viewer."
+              a: "Automatic failover is an opt-in toggle on each AI node. When enabled, if the primary model encounters a provider deprecation (HTTP 404) or rate limit (HTTP 429), the engine cascades sequentially to Groq and OpenRouter within a single monotonic timeout budget. Providers without configured server environment keys (e.g. GROQ_API_KEY, OPENROUTER_API_KEY) are cleanly bypassed without halting the workflow, and full attempt telemetry is logged in the Visual Failover Cascade Viewer."
             },
             {
               q: "How does execution telemetry and history work?",
@@ -973,7 +973,7 @@ export default function Home() {
             </div>
 
             <p className="text-[11px] text-[#B9B0A0]/70 pt-2 font-mono">
-              Self-contained execution engine • MongoDB Atlas • Google Gemini • Groq • OpenAI • Mistral
+              Self-contained execution engine • MongoDB Atlas • Google Gemini • Groq • OpenAI • OpenRouter
             </p>
           </div>
         </div>

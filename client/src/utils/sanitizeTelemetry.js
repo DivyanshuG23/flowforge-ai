@@ -20,6 +20,7 @@ export const sanitizeTelemetryError = (error) => {
     .replace(/(?:Bearer\s+)[A-Za-z0-9\-._~+/]+=*/gi, 'Bearer [REDACTED]')
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED_GEMINI_KEY]')
     .replace(/gsk_[0-9A-Za-z_-]{20,}/g, '[REDACTED_GROQ_KEY]')
+    .replace(/sk-or-v1-[a-zA-Z0-9_-]{20,}/gi, '[REDACTED_OPENROUTER_KEY]')
     .replace(/sk-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENAI_KEY]')
     .replace(/(?:key|secret|apiKey|api_key|password|token|jwt|auth)[=:]\s*['"]?[A-Za-z0-9\-._~+/]{6,}['"]?/gi, (match) => {
       const prefix = match.split(/[=:]/)[0];
@@ -80,6 +81,7 @@ export const sanitizeErrorText = (text) => {
   return text
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED_GEMINI_KEY]')
     .replace(/gsk_[0-9A-Za-z_-]{20,}/g, '[REDACTED_GROQ_KEY]')
+    .replace(/sk-or-v1-[a-zA-Z0-9_-]{20,}/gi, '[REDACTED_OPENROUTER_KEY]')
     .replace(/sk-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENAI_KEY]')
     .replace(/(?:key|secret|apiKey|api_key|token)[=:]\s*['"]?[A-Za-z0-9\-._~+/]{8,}['"]?/gi, (m) => {
       const prefix = m.split(/[=:]/)[0];

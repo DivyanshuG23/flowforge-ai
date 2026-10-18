@@ -24,6 +24,11 @@ const PROVIDER_METADATA = {
     badgeClass: 'text-[#059669] bg-[#059669]/15 border-[#059669]/30',
     defaultModel: 'openai/gpt-oss-20b',
   },
+  openrouter: {
+    displayName: 'OpenRouter (Free)',
+    badgeClass: 'text-[#818CF8] bg-[#818CF8]/15 border-[#818CF8]/30',
+    defaultModel: 'google/gemma-4-31b-it:free',
+  },
   openai: {
     displayName: 'OpenAI',
     badgeClass: 'text-[#F5F0E6] bg-[#1C1F1C] border-[rgba(185,176,160,0.2)]',

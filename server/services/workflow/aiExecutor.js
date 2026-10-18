@@ -26,6 +26,7 @@ export const MAX_TIMEOUT_MS = 60000; // 60 seconds
 export const DEFAULT_GEMINI_MODEL = process.env.GEMINI_DEFAULT_MODEL || 'gemini-3.8-flash';
 export const DEFAULT_GROQ_MODEL = process.env.GROQ_DEFAULT_MODEL || 'openai/gpt-oss-20b';
 export const DEFAULT_OPENAI_MODEL = process.env.OPENAI_DEFAULT_MODEL || 'gpt-4o-mini';
+export const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_DEFAULT_MODEL || 'google/gemma-4-31b-it:free';
 export const DEFAULT_MISTRAL_MODEL = process.env.MISTRAL_DEFAULT_MODEL || 'mistral-small-latest';
 export const DEFAULT_TEMPERATURE = 0.2;
 export const DEFAULT_MAX_TOKENS = 1024;
@@ -67,7 +68,7 @@ export const BACKOFF_MULTIPLIER = 2; // Exponential factor
 export const MAX_RETRY_DELAY_MS = 5000; // Cap backoff delay at 5 seconds
 export const MAX_JITTER_RATIO = 0.3; // 0% to 30% randomized jitter
 
-export const ALLOWED_PROVIDERS = new Set(['gemini', 'openai', 'openai-compatible', 'groq', 'mistral']);
+export const ALLOWED_PROVIDERS = new Set(['gemini', 'openai', 'openai-compatible', 'groq', 'openrouter']);
 export const ALLOWED_OUTPUT_FORMATS = new Set(['text', 'json']);
 
 // Provider Metadata Configuration
@@ -86,6 +87,14 @@ export const PROVIDER_CONFIGS = {
     defaultModel: DEFAULT_GROQ_MODEL,
     protocol: 'openai-compatible',
     baseUrl: 'https://api.groq.com/openai/v1'
+  },
+  openrouter: {
+    id: 'openrouter',
+    name: 'OpenRouter (Free)',
+    envKey: 'OPENROUTER_API_KEY',
+    defaultModel: DEFAULT_OPENROUTER_MODEL,
+    protocol: 'openai-compatible',
+    baseUrl: 'https://openrouter.ai/api/v1'
   },
   openai: {
     id: 'openai',
@@ -113,12 +122,11 @@ export const PROVIDER_CONFIGS = {
   }
 };
 
-// Default automatic failover priority cascade
+// Default automatic failover priority cascade (100% Free / ₹0 Budget)
 export const DEFAULT_FAILOVER_CHAIN = [
   { provider: 'gemini', model: DEFAULT_GEMINI_MODEL },
   { provider: 'groq', model: DEFAULT_GROQ_MODEL },
-  { provider: 'openai', model: DEFAULT_OPENAI_MODEL },
-  { provider: 'mistral', model: DEFAULT_MISTRAL_MODEL }
+  { provider: 'openrouter', model: DEFAULT_OPENROUTER_MODEL }
 ];
 
 // Allowlist of approved HTTPS hosts for AI inference endpoints
@@ -126,6 +134,7 @@ export const APPROVED_HTTPS_HOSTS = new Set([
   'generativelanguage.googleapis.com',
   'api.openai.com',
   'api.groq.com',
+  'openrouter.ai',
   'api.deepseek.com',
   'api.anthropic.com',
   'api.together.xyz',
@@ -201,6 +210,7 @@ export const sanitizeSecretsInString = (text) => {
   let sanitized = text
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED_GEMINI_KEY]')
     .replace(/gsk_[0-9A-Za-z_-]{20,}/g, '[REDACTED_GROQ_KEY]')
+    .replace(/sk-or-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENROUTER_KEY]')
     .replace(/sk-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENAI_KEY]')
     .replace(/Bearer\s+[0-9A-Za-z_.\-]+/gi, 'Bearer [REDACTED]')
     .replace(/([?&]key=)[^&\s]+/gi, '$1[REDACTED]');
@@ -210,6 +220,7 @@ export const sanitizeSecretsInString = (text) => {
     process.env.GEMINI_API_KEY,
     process.env.AI_API_KEY,
     process.env.GROQ_API_KEY,
+    process.env.OPENROUTER_API_KEY,
     process.env.OPENAI_API_KEY,
     process.env.MISTRAL_API_KEY
   ].filter((k) => typeof k === 'string' && k.trim().length >= 8);
@@ -258,6 +269,7 @@ export const validateProviderEndpoint = async (rawUrl) => {
   const customBaseUrls = [
     process.env.OPENAI_BASE_URL,
     process.env.GROQ_BASE_URL,
+    process.env.OPENROUTER_BASE_URL,
     process.env.MISTRAL_BASE_URL
   ];
 
@@ -855,6 +867,11 @@ const executeOpenAiRequest = async (config, options) => {
     baseUrl = (process.env.GROQ_BASE_URL || options.baseUrl || 'https://api.groq.com/openai/v1').replace(/\/+$/, '');
     providerLabel = 'Groq';
     defaultModel = DEFAULT_GROQ_MODEL;
+  } else if (config.provider === 'openrouter') {
+    apiKey = process.env.OPENROUTER_API_KEY;
+    baseUrl = (process.env.OPENROUTER_BASE_URL || options.baseUrl || 'https://openrouter.ai/api/v1').replace(/\/+$/, '');
+    providerLabel = 'OpenRouter';
+    defaultModel = DEFAULT_OPENROUTER_MODEL;
   } else if (config.provider === 'mistral') {
     apiKey = process.env.MISTRAL_API_KEY;
     baseUrl = (process.env.MISTRAL_BASE_URL || options.baseUrl || 'https://api.mistral.ai/v1').replace(/\/+$/, '');
@@ -875,9 +892,11 @@ const executeOpenAiRequest = async (config, options) => {
   if (!apiKey || !apiKey.trim()) {
     const envVarName = config.provider === 'groq'
       ? 'GROQ_API_KEY'
-      : config.provider === 'mistral'
-        ? 'MISTRAL_API_KEY'
-        : 'OPENAI_API_KEY';
+      : config.provider === 'openrouter'
+        ? 'OPENROUTER_API_KEY'
+        : config.provider === 'mistral'
+          ? 'MISTRAL_API_KEY'
+          : 'OPENAI_API_KEY';
     return {
       success: false,
       error: `AI execution failed: ${envVarName} is not configured in server environment variables.`,
@@ -886,6 +905,16 @@ const executeOpenAiRequest = async (config, options) => {
   }
 
   const model = config.model || defaultModel;
+
+  // Strict ₹0 budget guardrail: OpenRouter models must end with ":free"
+  if (config.provider === 'openrouter' && !model.endsWith(':free')) {
+    return {
+      success: false,
+      error: `OpenRouter provider in FlowForge AI is restricted strictly to free models (model ID must end with ":free"). Model "${model}" is not permitted under the ₹0 policy.`,
+      durationMs: 0
+    };
+  }
+
   const cleanBaseUrl = baseUrl.replace(/\/chat\/completions\/?$/i, '').replace(/\/+$/, '');
   const endpointUrl = `${cleanBaseUrl}/chat/completions`;
   const sanitizedEndpoint = sanitizeUrl(endpointUrl);
@@ -960,12 +989,18 @@ const executeOpenAiRequest = async (config, options) => {
     const attemptStartTime = Date.now();
 
     try {
+      const requestHeaders = {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      };
+      if (config.provider === 'openrouter') {
+        requestHeaders['HTTP-Referer'] = 'https://flowforge.ai';
+        requestHeaders['X-Title'] = 'FlowForge AI';
+      }
+
       const response = await fetchFn(endpointUrl, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`
-        },
+        headers: requestHeaders,
         body: JSON.stringify(payload),
         signal: controller.signal
       });
@@ -1225,6 +1260,8 @@ export const executeWithFailover = async (config, options) => {
       );
     } else if (candidate.provider === 'groq') {
       hasKey = !!(process.env.GROQ_API_KEY && process.env.GROQ_API_KEY.trim());
+    } else if (candidate.provider === 'openrouter') {
+      hasKey = !!(process.env.OPENROUTER_API_KEY && process.env.OPENROUTER_API_KEY.trim());
     } else if (candidate.provider === 'mistral') {
       hasKey = !!(process.env.MISTRAL_API_KEY && process.env.MISTRAL_API_KEY.trim());
     } else {

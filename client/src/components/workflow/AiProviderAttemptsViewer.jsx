@@ -24,6 +24,7 @@ export const sanitizeErrorText = (text) => {
   return text
     .replace(/AIza[0-9A-Za-z_-]{30,}/g, '[REDACTED_GEMINI_KEY]')
     .replace(/gsk_[0-9A-Za-z_-]{20,}/g, '[REDACTED_GROQ_KEY]')
+    .replace(/sk-or-v1-[a-zA-Z0-9_-]{20,}/gi, '[REDACTED_OPENROUTER_KEY]')
     .replace(/sk-[0-9A-Za-z_-]{20,}/g, '[REDACTED_OPENAI_KEY]')
     .replace(/(?:key|secret|apiKey|api_key|token)[=:]\s*['"]?[A-Za-z0-9\-._~+/]{8,}['"]?/gi, (m) => {
       const prefix = m.split(/[=:]/)[0];
@@ -82,6 +83,11 @@ const PROVIDER_METADATA = {
     name: 'Groq LPU',
     badgeClass: 'text-[#F59E0B] bg-[#F59E0B]/10 border-[#F59E0B]/30',
     tag: 'Groq'
+  },
+  openrouter: {
+    name: 'OpenRouter (Free)',
+    badgeClass: 'text-[#818CF8] bg-[#818CF8]/10 border-[#818CF8]/30',
+    tag: 'OpenRouter'
   },
   openai: {
     name: 'OpenAI',

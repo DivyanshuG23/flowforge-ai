@@ -866,7 +866,7 @@ export default function PropertiesPanel({
                     const newProvider = e.target.value;
                     let newModel = 'gemini-3.8-flash';
                     if (newProvider === 'groq') newModel = 'openai/gpt-oss-20b';
-                    else if (newProvider === 'mistral') newModel = 'mistral-small-latest';
+                    else if (newProvider === 'openrouter') newModel = 'google/gemma-4-31b-it:free';
                     else if (newProvider === 'openai' || newProvider === 'openai-compatible') newModel = 'gpt-4o-mini';
 
                     onUpdateNode(selectedNode.id, {
@@ -879,8 +879,8 @@ export default function PropertiesPanel({
                 >
                   <option value="gemini">Google Gemini (REST API)</option>
                   <option value="groq">Groq (GPT-OSS / Ultra-Fast LPU)</option>
+                  <option value="openrouter">OpenRouter (Free Models :free)</option>
                   <option value="openai">OpenAI (Chat Completions)</option>
-                  <option value="mistral">Mistral AI (Mistral Small / Large)</option>
                   <option value="openai-compatible">OpenAI-Compatible Gateway</option>
                 </select>
               </div>
@@ -897,7 +897,7 @@ export default function PropertiesPanel({
                       const isCustom = !!selectedNode.data?._isCustomModel;
                       const defaultPreset =
                         selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
-                        selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                        selectedNode.data?.provider === 'openrouter' ? 'google/gemma-4-31b-it:free' :
                         selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini';
                       onUpdateNode(selectedNode.id, {
                         ...selectedNode.data,
@@ -922,7 +922,7 @@ export default function PropertiesPanel({
                     }
                     placeholder={
                       selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
-                      selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                      selectedNode.data?.provider === 'openrouter' ? 'google/gemma-4-31b-it:free' :
                       selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     }
                     className="w-full bg-[#151715] border border-[rgba(185,176,160,0.16)] rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#F5F0E6] placeholder-[#B9B0A0]/30 focus:outline-none focus:border-[#E5B45B]"
@@ -931,7 +931,7 @@ export default function PropertiesPanel({
                   <select
                     value={selectedNode.data?.model || (
                       selectedNode.data?.provider === 'groq' ? 'openai/gpt-oss-20b' :
-                      selectedNode.data?.provider === 'mistral' ? 'mistral-small-latest' :
+                      selectedNode.data?.provider === 'openrouter' ? 'google/gemma-4-31b-it:free' :
                       selectedNode.data?.provider === 'gemini' ? 'gemini-3.8-flash' : 'gpt-4o-mini'
                     )}
                     onChange={(e) =>
@@ -958,11 +958,12 @@ export default function PropertiesPanel({
                         <option value="qwen/qwen3.8-27b">qwen/qwen3.8-27b (Multimodal Reasoning 27B)</option>
                       </>
                     )}
-                    {selectedNode.data?.provider === 'mistral' && (
+                    {selectedNode.data?.provider === 'openrouter' && (
                       <>
-                        <option value="mistral-small-latest">mistral-small-latest (Fast Reasoning &amp; Triage)</option>
-                        <option value="mistral-large-latest">mistral-large-latest (Top-tier Flagship)</option>
-                        <option value="codestral-latest">codestral-latest (Code &amp; Systems Logic)</option>
+                        <option value="google/gemma-4-31b-it:free">google/gemma-4-31b-it:free (Gemma 4 31B / Recommended)</option>
+                        <option value="google/gemma-4-26b-a4b-it:free">google/gemma-4-26b-a4b-it:free (Gemma 4 26B MoE)</option>
+                        <option value="nvidia/nemotron-3.5-lightning:free">nvidia/nemotron-3.5-lightning:free (Nemotron 3.5 Lightning 1M ctx)</option>
+                        <option value="cohere/north-mini-code:free">cohere/north-mini-code:free (Cohere North Mini Code)</option>
                       </>
                     )}
                     {(selectedNode.data?.provider === 'openai' || selectedNode.data?.provider === 'openai-compatible' || !selectedNode.data?.provider) && (
@@ -1169,9 +1170,9 @@ export default function PropertiesPanel({
                     <div className="flex items-center gap-1 text-[11px] text-[#F5F0E6] font-mono flex-wrap">
                       {(() => {
                         const curProvider = (selectedNode.data?.provider || 'gemini').toLowerCase();
-                        const defaultOrder = ['gemini', 'groq', 'openai', 'mistral'];
+                        const defaultOrder = ['gemini', 'groq', 'openrouter'];
                         const providers = [curProvider, ...defaultOrder.filter((p) => p !== curProvider)];
-                        const labels = { gemini: 'Gemini', groq: 'Groq', openai: 'OpenAI', mistral: 'Mistral' };
+                        const labels = { gemini: 'Gemini', groq: 'Groq', openrouter: 'OpenRouter (Free)', openai: 'OpenAI' };
 
                         return providers.map((p, idx) => (
                           <React.Fragment key={p}>
@@ -1232,7 +1233,7 @@ export default function PropertiesPanel({
                 <Info className="w-3.5 h-3.5 text-[#E5B45B] flex-shrink-0 mt-0.5" />
                 <div className="leading-tight">
                   <span className="font-semibold text-[#E5B45B] block mb-0.5">Server-Side Credentials</span>
-                  <span>API keys are loaded securely from server environment variables (<code className="text-[#F5F0E6]">GEMINI_API_KEY</code>, <code className="text-[#F5F0E6]">GROQ_API_KEY</code>, <code className="text-[#F5F0E6]">OPENAI_API_KEY</code>, <code className="text-[#F5F0E6]">MISTRAL_API_KEY</code>). Secrets are never stored in node definitions or browser bundles.</span>
+                  <span>API keys are loaded securely from server environment variables (<code className="text-[#F5F0E6]">GEMINI_API_KEY</code>, <code className="text-[#F5F0E6]">GROQ_API_KEY</code>, <code className="text-[#F5F0E6]">OPENROUTER_API_KEY</code>). Secrets are never stored in node definitions or browser bundles.</span>
                 </div>
               </div>
             </div>
