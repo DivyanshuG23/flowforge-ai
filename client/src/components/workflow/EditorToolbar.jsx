@@ -68,13 +68,14 @@ export default function EditorToolbar({
   };
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-[#0B0D0C] border-b border-[rgba(185,176,160,0.12)] flex items-center justify-between z-30 select-none shadow-inner-highlight">
+    <header className="h-16 px-2.5 sm:px-6 bg-[#0B0D0C] border-b border-[rgba(185,176,160,0.12)] flex items-center justify-between z-30 select-none shadow-inner-highlight">
       {/* Left: Back button & Workflow Name */}
-      <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
+      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0">
         <button
           onClick={handleBackToDashboard}
-          className="flex items-center space-x-2 px-3 py-1.5 rounded-xl bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.14)] hover:border-[#E5B45B]/40 transition-all duration-200 text-xs font-medium group"
+          className="flex items-center space-x-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.14)] hover:border-[#E5B45B]/40 transition-all duration-200 text-xs font-medium group shrink-0"
           title="Return to Dashboard"
+          aria-label="Return to Dashboard"
         >
           <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
           <span className="hidden sm:inline">Dashboard</span>
@@ -83,7 +84,7 @@ export default function EditorToolbar({
         <div className="h-5 w-px bg-[rgba(185,176,160,0.14)] hidden sm:block" />
 
         {/* Editable Title */}
-        <div className="flex items-center space-x-2 min-w-0">
+        <div className="flex items-center space-x-1.5 min-w-0">
           {isEditingTitle ? (
             <form onSubmit={handleTitleSubmit} className="flex items-center space-x-1.5">
               <input
@@ -92,12 +93,13 @@ export default function EditorToolbar({
                 onChange={(e) => setTempTitle(e.target.value)}
                 onBlur={handleTitleSubmit}
                 autoFocus
-                className="bg-[#151715] text-[#F5F0E6] text-sm font-bold px-2.5 py-1 rounded-lg border border-[#E5B45B] focus:outline-none focus:ring-1 focus:ring-[#E5B45B] w-48 sm:w-64"
+                className="bg-[#151715] text-[#F5F0E6] text-xs sm:text-sm font-bold px-2 py-1 rounded-lg border border-[#E5B45B] focus:outline-none focus:ring-1 focus:ring-[#E5B45B] w-32 xs:w-48 sm:w-64"
                 maxLength={45}
               />
               <button
                 type="submit"
                 className="p-1 rounded bg-[#252419] text-[#E5B45B] hover:bg-[#E5B45B] hover:text-[#0B0D0C] transition-colors"
+                aria-label="Confirm workflow title"
               >
                 <Check className="w-3.5 h-3.5" />
               </button>
@@ -108,13 +110,13 @@ export default function EditorToolbar({
                 setTempTitle(workflowName);
                 setIsEditingTitle(true);
               }}
-              className="flex items-center space-x-2 group cursor-pointer px-2 py-1 rounded-lg hover:bg-[#151715] transition-colors"
+              className="flex items-center space-x-1.5 group cursor-pointer px-1.5 py-1 rounded-lg hover:bg-[#151715] transition-colors min-w-0"
               title="Click to rename workflow"
             >
-              <h1 className="text-sm sm:text-base font-bold text-[#F5F0E6] truncate group-hover:text-[#E5B45B] transition-colors max-w-[160px] sm:max-w-xs">
+              <h1 className="text-xs sm:text-base font-bold text-[#F5F0E6] truncate group-hover:text-[#E5B45B] transition-colors max-w-[100px] xs:max-w-[150px] sm:max-w-xs">
                 {workflowName}
               </h1>
-              <Edit3 className="w-3.5 h-3.5 text-[#B9B0A0]/60 group-hover:text-[#E5B45B] transition-colors flex-shrink-0" />
+              <Edit3 className="w-3 h-3 text-[#B9B0A0]/60 group-hover:text-[#E5B45B] transition-colors flex-shrink-0" />
             </div>
           )}
 
@@ -233,7 +235,7 @@ export default function EditorToolbar({
             type="button"
             onClick={onDuplicate}
             disabled={isDuplicating || isSaving || isRunning}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border ${
+            className={`flex items-center space-x-1.5 p-2 sm:px-3 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 border ${
               isDuplicating
                 ? 'bg-[#151715] text-[#B9B0A0] border-[rgba(185,176,160,0.1)] cursor-wait opacity-80'
                 : 'bg-[#151715] hover:bg-[#252419] text-[#B9B0A0] hover:text-[#E5B45B] border-[rgba(185,176,160,0.16)] hover:border-[#E5B45B]/40'
@@ -246,16 +248,15 @@ export default function EditorToolbar({
             ) : (
               <Copy className="w-3.5 h-3.5" />
             )}
-            <span className="hidden sm:inline">{isDuplicating ? 'Duplicating...' : 'Duplicate'}</span>
+            <span className="hidden md:inline">{isDuplicating ? 'Duplicating...' : 'Duplicate'}</span>
           </button>
         )}
 
         {/* Save to Cloud Button */}
-
         <button
           onClick={onSave}
           disabled={isSaving}
-          className={`flex items-center space-x-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-sm ${
+          className={`flex items-center space-x-1.5 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-sm ${
             isSaving
               ? 'bg-[#151715] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)] cursor-wait opacity-80'
               : isDirty
@@ -263,13 +264,14 @@ export default function EditorToolbar({
               : 'bg-[#151715] hover:bg-[#252419] text-[#F5F0E6] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.16)] hover:border-[#E5B45B]/40'
           }`}
           title={workflowId ? 'Update workflow in database' : 'Save workflow to database'}
+          aria-label={workflowId ? 'Save workflow' : 'Save new workflow'}
         >
           {isSaving ? (
-            <Loader2 className="w-4 h-4 motion-safe:animate-spin text-current" />
+            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 motion-safe:animate-spin text-current" />
           ) : (
-            <Save className={`w-4 h-4 ${isDirty ? 'text-[#0B0D0C]' : 'text-[#E5B45B]'}`} />
+            <Save className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${isDirty ? 'text-[#0B0D0C]' : 'text-[#E5B45B]'}`} />
           )}
-          <span>{isSaving ? 'Saving...' : workflowId ? 'Save' : 'Save Workflow'}</span>
+          <span>{isSaving ? 'Saving...' : workflowId ? 'Save' : <><span className="hidden sm:inline">Save </span>Draft</>}</span>
         </button>
 
         {/* Run Pipeline Button */}
@@ -277,17 +279,18 @@ export default function EditorToolbar({
           type="button"
           onClick={onRun}
           disabled={isRunning || isSaving}
-          className={`flex items-center space-x-2 px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-sm ${
+          className={`flex items-center space-x-1.5 px-3 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 shadow-sm ${
             isRunning
               ? 'bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.3)] cursor-wait opacity-90'
               : 'bg-[#252419] hover:bg-[#E5B45B] text-[#E5B45B] hover:text-[#0B0D0C] border border-[rgba(229,180,91,0.35)] shadow-glow-gold'
           }`}
           title={workflowId ? 'Execute workflow with foundation engine' : 'Save workflow first to execute'}
+          aria-label="Run workflow"
         >
           {isRunning ? (
-            <Loader2 className="w-4 h-4 motion-safe:animate-spin text-current" />
+            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 motion-safe:animate-spin text-current" />
           ) : (
-            <Play className="w-4 h-4 fill-current" />
+            <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
           )}
           <span>{isRunning ? 'Running...' : 'Run'}</span>
         </button>

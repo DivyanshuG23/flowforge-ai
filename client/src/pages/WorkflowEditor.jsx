@@ -28,7 +28,7 @@ import {
 } from '../services/api';
 import { sanitizeTelemetryError } from '../utils/sanitizeTelemetry';
 import ExecutionResultModal from '../components/workflow/ExecutionResultModal';
-import { PlusCircle, Sparkles, Layers, Loader2, AlertCircle, ArrowLeft } from 'lucide-react';
+import { PlusCircle, Sparkles, Layers, Loader2, AlertCircle, ArrowLeft, Sliders } from 'lucide-react';
 
 const defaultNodeData = {
   trigger: {
@@ -143,6 +143,7 @@ function WorkflowEditorContent() {
   const [workflowName, setWorkflowName] = useState('Untitled Workflow');
   const [workflowDescription, setWorkflowDescription] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState(null);
 
   // Trigger configurations (Server Schedule & Webhook)
@@ -752,7 +753,7 @@ function WorkflowEditorContent() {
   // Graceful error state if fetching failed
   if (loadError) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#0B0D0C] text-[#F5F0E6] p-4 select-none">
+      <div className="h-[100dvh] w-full flex flex-col items-center justify-center bg-[#0B0D0C] text-[#F5F0E6] p-4 select-none">
         <div className="max-w-md w-full p-8 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.16)] text-center space-y-5 shadow-2xl">
           <div className="w-12 h-12 rounded-2xl bg-[#C83C3C]/10 border border-[#C83C3C]/30 flex items-center justify-center text-[#C83C3C] mx-auto">
             <AlertCircle className="w-6 h-6" />
@@ -785,7 +786,7 @@ function WorkflowEditorContent() {
   }
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-[#0B0D0C] text-[#F5F0E6] overflow-hidden font-sans">
+    <div className="h-[100dvh] w-full flex flex-col bg-[#0B0D0C] text-[#F5F0E6] overflow-hidden font-sans">
       {/* Top Toolbar */}
       <EditorToolbar
         workflowName={workflowName}
@@ -816,10 +817,36 @@ function WorkflowEditorContent() {
           onAddNode={handleAddNodeFromClick}
           isCollapsed={sidebarCollapsed}
           onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
+          mobileOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
         />
 
         {/* Central React Flow Canvas */}
         <div className="flex-1 h-full relative">
+          {/* Floating Mobile Trigger to open Node Library */}
+          <div className="absolute top-3 left-3 z-30 md:hidden flex items-center space-x-2">
+            <button
+              type="button"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] font-bold text-xs shadow-lg shadow-[#E5B45B]/20 transition-all active:scale-95"
+              title="Open Node Library"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>Add Node</span>
+            </button>
+            {selectedNode && (
+              <button
+                type="button"
+                onClick={() => setSelectedNodeId(selectedNode.id)}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#151715] hover:bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.35)] font-semibold text-xs shadow-md transition-all active:scale-95"
+                title="Inspect selected node"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Inspector</span>
+              </button>
+            )}
+          </div>
+
           <ReactFlow
             nodes={displayNodes}
             edges={edges}

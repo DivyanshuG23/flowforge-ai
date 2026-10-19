@@ -10,7 +10,8 @@ import {
   Plus,
   HelpCircle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 
 const availableNodes = [
@@ -70,56 +71,75 @@ const availableNodes = [
   },
 ];
 
-export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }) {
+export default function NodeSidebar({
+  onAddNode,
+  isCollapsed,
+  onToggleCollapse,
+  mobileOpen = false,
+  onCloseMobile
+}) {
   const onDragStart = (event, nodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  return (
-    <aside
-      className={`relative z-20 bg-[#0B0D0C] border-r border-[rgba(185,176,160,0.12)] flex flex-col transition-all duration-300 shadow-inner-highlight ${
-        isCollapsed ? 'w-14' : 'w-72'
-      }`}
-    >
+  const renderContent = (isMobile = false) => (
+    <>
       {/* Header */}
       <div className="h-14 px-4 flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] bg-[#0B0D0C]">
-        {!isCollapsed && (
+        {(!isCollapsed || isMobile) && (
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-[#F5F0E6]">
               Node Library
             </h3>
             <span className="text-[10px] text-[#B9B0A0] block">
-              Drag or click to add
+              {isMobile ? 'Tap node to add to canvas' : 'Drag or click to add'}
             </span>
           </div>
         )}
 
-        <button
-          onClick={onToggleCollapse}
-          className="p-1 rounded-lg text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] transition-colors mx-auto"
-          title={isCollapsed ? 'Expand node library' : 'Collapse node library'}
-        >
-          {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-        </button>
+        {isMobile ? (
+          <button
+            onClick={onCloseMobile}
+            className="p-1.5 rounded-lg text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] transition-colors"
+            title="Close node library"
+            aria-label="Close node library"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            onClick={onToggleCollapse}
+            className="p-1 rounded-lg text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] transition-colors mx-auto"
+            title={isCollapsed ? 'Expand node library' : 'Collapse node library'}
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
+        )}
       </div>
 
       {/* Node list */}
       <div className="flex-1 p-3 space-y-2.5 overflow-y-auto">
         {availableNodes.map((item) => {
           const Icon = item.icon;
+          const showCompact = isCollapsed && !isMobile;
           return (
             <div
               key={item.type}
-              draggable
+              draggable={!isMobile}
               onDragStart={(e) => onDragStart(e, item.type)}
-              onClick={() => onAddNode(item.type)}
-              className={`group cursor-grab active:cursor-grabbing p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-200 ${
-                isCollapsed ? 'flex justify-center p-2.5' : ''
+              onClick={() => {
+                onAddNode(item.type);
+                if (isMobile && onCloseMobile) {
+                  onCloseMobile();
+                }
+              }}
+              className={`group cursor-pointer sm:cursor-grab active:cursor-grabbing p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-200 ${
+                showCompact ? 'flex justify-center p-2.5' : ''
               }`}
-              title={isCollapsed ? `${item.label} (${item.description})` : undefined}
+              title={showCompact ? `${item.label} (${item.description})` : undefined}
             >
-              {isCollapsed ? (
+              {showCompact ? (
                 <div className="w-8 h-8 rounded-lg bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] group-hover:scale-105 transition-transform">
                   <Icon className="w-4 h-4" />
                 </div>
@@ -139,7 +159,9 @@ export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }
                       <span className="text-[9px] font-semibold tracking-wider uppercase px-1.5 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0] border border-[rgba(185,176,160,0.1)]">
                         {item.badge}
                       </span>
-                      <GripVertical className="w-3.5 h-3.5 text-[#B9B0A0]/40 group-hover:text-[#E5B45B] transition-colors" />
+                      {!isMobile && (
+                        <GripVertical className="w-3.5 h-3.5 text-[#B9B0A0]/40 group-hover:text-[#E5B45B] transition-colors" />
+                      )}
                     </div>
                   </div>
 
@@ -154,16 +176,45 @@ export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }
       </div>
 
       {/* Tip footer */}
-      {!isCollapsed && (
+      {(!isCollapsed || isMobile) && (
         <div className="p-3 border-t border-[rgba(185,176,160,0.08)] bg-[#0B0D0C]">
           <div className="p-2.5 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.08)] flex items-start space-x-2 text-[10px] text-[#B9B0A0]">
             <HelpCircle className="w-3.5 h-3.5 text-[#E5B45B] flex-shrink-0 mt-0.5" />
             <p>
-              Drag nodes onto the canvas or click to add them directly to your pipeline flow.
+              {isMobile
+                ? 'Tap any node above to immediately insert it into your active workflow.'
+                : 'Drag nodes onto the canvas or click to add them directly to your pipeline flow.'}
             </p>
           </div>
         </div>
       )}
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile Drawer Backdrop & Container */}
+      {mobileOpen && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            onClick={onCloseMobile}
+            aria-hidden="true"
+          />
+          <aside className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] bg-[#0B0D0C] border-r border-[rgba(185,176,160,0.18)] shadow-2xl flex flex-col md:hidden animate-fade-in">
+            {renderContent(true)}
+          </aside>
+        </>
+      )}
+
+      {/* Desktop / Tablet Sidebar (Hidden on mobile < 768px) */}
+      <aside
+        className={`relative z-20 bg-[#0B0D0C] border-r border-[rgba(185,176,160,0.12)] hidden md:flex flex-col transition-all duration-300 shadow-inner-highlight ${
+          isCollapsed ? 'w-14' : 'w-72'
+        }`}
+      >
+        {renderContent(false)}
+      </aside>
+    </>
   );
 }

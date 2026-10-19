@@ -82,19 +82,19 @@ export default function Home() {
           {/* Left Column: Industrial Typography & Action Triggers */}
           <div className="lg:col-span-6 space-y-6 text-left">
             {/* Engineering Status Chip */}
-            <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-inner-highlight text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse" />
-              <span className="text-[#B9B0A0] uppercase tracking-wider text-[11px]">System v3.0 // Multi-Tier Fallback</span>
-              <span className="text-[10px] text-[#E5B45B] font-semibold bg-[#252419] px-2 py-0.5 rounded-full border border-[rgba(229,180,91,0.25)]">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-inner-highlight text-xs font-mono max-w-full flex-wrap">
+              <span className="w-2 h-2 rounded-full bg-[#059669] animate-pulse shrink-0" />
+              <span className="text-[#B9B0A0] uppercase tracking-wider text-[10px] sm:text-[11px]">System v3.0 // Multi-Tier Fallback</span>
+              <span className="text-[10px] text-[#E5B45B] font-semibold bg-[#252419] px-2 py-0.5 rounded-full border border-[rgba(229,180,91,0.25)] shrink-0">
                 Active
               </span>
             </div>
 
             {/* Editorial Headline */}
             <div className="space-y-3">
-              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-[#F5F0E6]">
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.1] text-[#F5F0E6]">
                 The Deterministic AI Engine for{' '}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E5B45B] via-[#FAF7F2] to-[#E5B45B]">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E5B45B] via-[#F5F0E6] to-[#E5B45B]">
                   Engineering Teams.
                 </span>
               </h1>
@@ -636,88 +636,88 @@ export default function Home() {
       </section>
 
       {/* ========================================================= */}
-      {/* 4. PRODUCTION USE CASES (WARM IVORY CONTRAST SECTION)     */}
+      {/* 4. PRODUCTION USE CASES (DARK CHARCOAL INDUSTRIAL SECTION) */}
       {/* ========================================================= */}
-      <section id="use-cases" className="ivory-contrast-section py-20 px-4 sm:px-6 lg:px-8">
+      <section id="use-cases" className="py-20 px-4 sm:px-6 lg:px-8 border-y border-[rgba(185,176,160,0.12)] bg-[#111311] relative">
         <div className="max-w-7xl mx-auto space-y-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[#DDD5C5] pb-6 text-left">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-[rgba(185,176,160,0.14)] pb-6 text-left">
             <div className="space-y-2 max-w-2xl">
-              <span className="text-xs font-mono uppercase tracking-wider text-[#A17A2C] font-bold block">
+              <span className="text-xs font-mono uppercase tracking-wider text-[#E5B45B] font-bold block">
                 // PRODUCTION DEPLOYMENTS
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#0B0D0C]">
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#F5F0E6]">
                 Real Engineering Automations
               </h2>
-              <p className="text-sm text-[#4A463E]">
+              <p className="text-sm text-[#B9B0A0]">
                 FlowForge AI replaces fragile custom cron scripts with reliable, observable visual pipelines.
               </p>
             </div>
 
-            <span className="text-xs font-mono text-[#787164] bg-[#FFFFFF] px-3 py-1 rounded-full border border-[#DDD5C5]">
+            <span className="text-xs font-mono text-[#B9B0A0] bg-[#161917] px-3 py-1 rounded-full border border-[rgba(185,176,160,0.18)] self-start md:self-auto">
               Real-World Workloads
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
             {/* Case 1 */}
-            <div className="ivory-card p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4">
+            <div className="p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4 bg-[#151715] border border-[rgba(185,176,160,0.14)] hover:border-[#E5B45B]/50 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)] group">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-[#0B0D0C] text-[#E5B45B] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#241414] text-[#C83C3C] border border-[#C83C3C]/30 flex items-center justify-center">
                   <AlertCircle className="w-5 h-5 text-[#C83C3C]" />
                 </div>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#0B0D0C] border border-[#DDD5C5] font-bold">
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#241414] text-[#EF4444] border border-[#C83C3C]/40 font-bold">
                   SRE / Incident
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-[#0B0D0C]">
+              <h3 className="text-lg font-bold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors">
                 Autonomous Incident Triage &amp; Escalation
               </h3>
-              <p className="text-xs text-[#555047] leading-relaxed">
+              <p className="text-xs text-[#B9B0A0] leading-relaxed">
                 Ingest monitoring alerts, summarize stack traces via Google Gemini with automated failover, evaluate severity scores, and branch critical issues directly to on-call engineers.
               </p>
-              <div className="pt-3 border-t border-[#E5DDCB] text-[11px] font-mono text-[#0B0D0C] font-semibold">
+              <div className="pt-3 border-t border-[rgba(185,176,160,0.12)] text-[11px] font-mono text-[#E5B45B] font-semibold break-words">
                 Webhook ➔ Gemini Triage ➔ P1 Branch ➔ PagerDuty
               </div>
             </div>
 
             {/* Case 2 */}
-            <div className="ivory-card p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4">
+            <div className="p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4 bg-[#151715] border border-[rgba(185,176,160,0.14)] hover:border-[#E5B45B]/50 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)] group">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-[#0B0D0C] text-[#E5B45B] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#252419] text-[#E5B45B] border border-[#E5B45B]/30 flex items-center justify-center">
                   <Bot className="w-5 h-5 text-[#E5B45B]" />
                 </div>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#0B0D0C] border border-[#DDD5C5] font-bold">
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#252419] text-[#E5B45B] border border-[#E5B45B]/40 font-bold">
                   Support Ops
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-[#0B0D0C]">
+              <h3 className="text-lg font-bold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors">
                 Customer Sentiment &amp; Urgent Routing
               </h3>
-              <p className="text-xs text-[#555047] leading-relaxed">
+              <p className="text-xs text-[#B9B0A0] leading-relaxed">
                 Intercept inbound support tickets, extract sentiment frustration flags, compute account churn risk, and route high-value churn risks directly to engineering leadership.
               </p>
-              <div className="pt-3 border-t border-[#E5DDCB] text-[11px] font-mono text-[#0B0D0C] font-semibold">
+              <div className="pt-3 border-t border-[rgba(185,176,160,0.12)] text-[11px] font-mono text-[#E5B45B] font-semibold break-words">
                 Inbound Ticket ➔ LLM Sentiment ➔ Urgent Escalation
               </div>
             </div>
 
             {/* Case 3 */}
-            <div className="ivory-card p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4">
+            <div className="p-6 sm:p-7 rounded-2xl transition-all duration-300 space-y-4 bg-[#151715] border border-[rgba(185,176,160,0.14)] hover:border-[#E5B45B]/50 hover:shadow-[0_12px_28px_-6px_rgba(0,0,0,0.5)] group">
               <div className="flex items-center justify-between">
-                <div className="w-10 h-10 rounded-xl bg-[#0B0D0C] text-[#E5B45B] flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-[#132418] text-[#059669] border border-[#059669]/30 flex items-center justify-center">
                   <CheckCircle2 className="w-5 h-5 text-[#059669]" />
                 </div>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#FAF7F2] text-[#0B0D0C] border border-[#DDD5C5] font-bold">
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-[#132418] text-[#10B981] border border-[#059669]/40 font-bold">
                   Data Pipeline
                 </span>
               </div>
-              <h3 className="text-lg font-bold text-[#0B0D0C]">
+              <h3 className="text-lg font-bold text-[#F5F0E6] group-hover:text-[#E5B45B] transition-colors">
                 Schema Sanitization &amp; Anomaly Filter
               </h3>
-              <p className="text-xs text-[#555047] leading-relaxed">
+              <p className="text-xs text-[#B9B0A0] leading-relaxed">
                 Validate unstructured JSON payloads, normalize inconsistent attributes with LLM schema correction, and drop malicious or malformed payloads before database writes.
               </p>
-              <div className="pt-3 border-t border-[#E5DDCB] text-[11px] font-mono text-[#0B0D0C] font-semibold">
+              <div className="pt-3 border-t border-[rgba(185,176,160,0.12)] text-[11px] font-mono text-[#059669] font-semibold break-words">
                 Raw JSON ➔ Schema Validator ➔ Clean DB Write
               </div>
             </div>

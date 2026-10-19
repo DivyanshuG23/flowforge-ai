@@ -556,7 +556,7 @@ export default function Executions() {
             {/* Filter & Search Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[rgba(185,176,160,0.08)]">
               {/* Status Filter Tabs */}
-              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0">
+              <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
                 {[
                   { id: 'all', label: 'All Runs', count: stats.total },
                   { id: 'succeeded', label: 'Succeeded', count: stats.succeeded },
@@ -581,14 +581,14 @@ export default function Executions() {
               </div>
 
               {/* Trigger Filter & Search Controls */}
-              <div className="flex items-center space-x-2">
-                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.14)] text-xs text-[#B9B0A0]">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+                <div className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.14)] text-xs text-[#B9B0A0] flex-1 sm:flex-none">
                   <SlidersHorizontal className="w-3.5 h-3.5 text-[#E5B45B] flex-shrink-0" />
                   <span className="text-[11px] font-medium hidden sm:inline">Trigger:</span>
                   <select
                     value={triggerFilter}
                     onChange={(e) => handleTriggerFilterChange(e.target.value)}
-                    className="bg-transparent text-[#F5F0E6] text-xs focus:outline-none cursor-pointer pr-1"
+                    className="bg-transparent text-[#F5F0E6] text-xs focus:outline-none cursor-pointer pr-1 w-full"
                     aria-label="Filter executions by trigger source"
                   >
                     <option value="all" className="bg-[#151715] text-[#F5F0E6]">All Triggers</option>
@@ -674,8 +674,142 @@ export default function Executions() {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto -mx-5 sm:mx-0">
-                <table className="w-full text-left text-xs">
+              <>
+                {/* Mobile Execution Cards (< 768px) */}
+                <div className="md:hidden space-y-3">
+                  {filteredExecutions.map((exec) => {
+                    const wfName = exec.workflow?.name || 'Untitled Workflow';
+                    const wfId = exec.workflow?._id || exec.workflow;
+                    const isSuccess = exec.status === 'succeeded';
+                    const isFailed = exec.status === 'failed';
+                    const isRunning = exec.status === 'running';
+
+                    return (
+                      <div
+                        key={exec._id}
+                        className="p-4 rounded-2xl bg-[#111311] border border-[rgba(185,176,160,0.14)] space-y-3 shadow-sm hover:border-[#E5B45B]/40 transition-colors"
+                      >
+                        {/* Top Header: Workflow Name & Status */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <h4 className="text-sm font-bold text-[#F5F0E6] truncate">
+                              {wfName}
+                            </h4>
+                            <span className="text-[10px] text-[#B9B0A0]/70 font-mono">
+                              ID: {exec._id?.slice(-8)}
+                            </span>
+                          </div>
+                          <div className="shrink-0 flex flex-col items-end gap-1">
+                            <StatusBadge
+                              status={
+                                isSuccess
+                                  ? 'success'
+                                  : isFailed
+                                  ? 'failure'
+                                  : isRunning
+                                  ? 'running'
+                                  : 'pending'
+                              }
+                              label={
+                                isSuccess
+                                  ? 'Succeeded'
+                                  : isFailed
+                                  ? 'Failed'
+                                  : isRunning
+                                  ? 'Running'
+                                  : 'Queued'
+                              }
+                            />
+                            {Array.isArray(exec.nodeExecutions) && exec.nodeExecutions.some(
+                              (n) => Array.isArray(n.output?.failoverLog) && n.output.failoverLog.length > 1 && n.status === 'succeeded'
+                            ) && (
+                              <span className="inline-flex items-center space-x-1 text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-[#E5B45B]/15 text-[#E5B45B] border border-[rgba(229,180,91,0.3)]">
+                                <Sparkles className="w-2.5 h-2.5 text-[#E5B45B]" />
+                                <span>Failover OK</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Metadata Chips Grid */}
+                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-2 border-t border-[rgba(185,176,160,0.08)]">
+                          <div className="flex items-center space-x-1.5 text-[#B9B0A0]">
+                            <span className="text-[10px] uppercase font-mono text-[#B9B0A0]/60">Trigger:</span>
+                            <span className="text-[#F5F0E6] font-medium capitalize">{exec.triggerSource || 'Manual'}</span>
+                          </div>
+                          <div className="flex items-center space-x-1.5 text-[#B9B0A0]">
+                            <Clock className="w-3 h-3 text-[#B9B0A0]/60" />
+                            <span className="font-mono text-[#F5F0E6]">{formatDuration(exec.durationMs)}</span>
+                          </div>
+                          <div className="flex items-center space-x-1.5 text-[#B9B0A0]">
+                            <Layers className="w-3 h-3 text-[#B9B0A0]/60" />
+                            <span>{exec.nodeExecutions?.length || 0} nodes</span>
+                          </div>
+                          <div className="text-[10px] text-[#B9B0A0] truncate">
+                            {formatDateTime(exec.createdAt || exec.startedAt)}
+                          </div>
+                        </div>
+
+                        {/* Mobile Actions Toolbar */}
+                        <div className="flex items-center justify-between gap-1.5 pt-2 border-t border-[rgba(185,176,160,0.08)]">
+                          <div className="flex items-center space-x-1.5">
+                            <button
+                              onClick={() => handleRerunExecution(exec._id)}
+                              disabled={rerunningId === exec._id}
+                              className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.18)] text-[#F5F0E6] hover:bg-[#252419] hover:border-[rgba(229,180,91,0.3)] hover:text-[#E5B45B] text-xs font-medium transition-colors disabled:opacity-50"
+                            >
+                              <RotateCw className={`w-3 h-3 text-[#E5B45B] ${rerunningId === exec._id ? 'motion-safe:animate-spin' : ''}`} />
+                              <span>{rerunningId === exec._id ? 'Running...' : 'Rerun'}</span>
+                            </button>
+
+                            <button
+                              onClick={() => handleOpenDetail(exec._id)}
+                              className="px-2.5 py-1.5 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] hover:bg-[#2e2c1e] text-xs font-semibold transition-colors"
+                            >
+                              Trace
+                            </button>
+                          </div>
+
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handleExportTraceJson(exec)}
+                              className="p-1.5 rounded-lg text-[#B9B0A0] hover:text-[#E5B45B] hover:bg-[#151715] transition-colors"
+                              title="Export Trace JSON"
+                              aria-label="Export Trace JSON"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                            </button>
+
+                            <button
+                              onClick={() => setConfirmDeleteModal(exec._id)}
+                              disabled={deletingId === exec._id}
+                              className="p-1.5 rounded-lg text-[#B9B0A0] hover:text-[#C83C3C] hover:bg-[#151715] transition-colors disabled:opacity-50"
+                              title="Delete Execution Record"
+                              aria-label="Delete Execution Record"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+
+                            {wfId && (
+                              <Link
+                                to={`/workflows/${wfId}`}
+                                className="p-1.5 rounded-lg text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] transition-colors"
+                                title="Open in Workflow Editor"
+                                aria-label="Open in Workflow Editor"
+                              >
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop / Tablet 7-Column Table (Hidden on < 768px) */}
+                <div className="hidden md:block overflow-x-auto -mx-5 sm:mx-0">
+                  <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-[rgba(185,176,160,0.1)] text-[#B9B0A0] uppercase tracking-wider text-[10px]">
                       <th className="py-3 px-4 font-semibold">Workflow</th>
@@ -853,7 +987,8 @@ export default function Executions() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>
+          )}
 
             {/* Pagination Controls */}
             {totalPages > 1 && (

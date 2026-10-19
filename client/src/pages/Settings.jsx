@@ -205,9 +205,9 @@ export default function Settings() {
 
           {/* Section 1: Operator Profile Information */}
           <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl shadow-inner-highlight space-y-6">
-            <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[rgba(185,176,160,0.08)] pb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 rounded-2xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-sm shadow-md">
+                <div className="w-10 h-10 rounded-2xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-sm shadow-md shrink-0">
                   {user?.name ? user.name.charAt(0).toUpperCase() : <UserIcon className="w-5 h-5" />}
                 </div>
                 <div>
@@ -220,7 +220,7 @@ export default function Settings() {
                 </div>
               </div>
 
-              <span className="text-[11px] font-semibold uppercase px-2.5 py-1 rounded-full bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)]">
+              <span className="text-[11px] font-semibold uppercase px-2.5 py-1 rounded-full bg-[#252419] text-[#E5B45B] border border-[rgba(229,180,91,0.25)] self-start sm:self-auto shrink-0">
                 {user?.role === 'admin' ? 'Workspace Admin' : 'Standard Operator'}
               </span>
             </div>

@@ -22,11 +22,11 @@ export default function Footer() {
   };
 
   return (
-    <footer className="border-t border-[rgba(185,176,160,0.12)] bg-[#0B0D0C] text-[#B9B0A0] text-xs pt-16 pb-12 mt-auto shadow-inner-highlight">
+    <footer className="border-t border-[rgba(185,176,160,0.12)] bg-[#0B0D0C] text-[#B9B0A0] text-xs pt-12 sm:pt-16 pb-8 sm:pb-12 mt-auto shadow-inner-highlight">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[rgba(185,176,160,0.08)]">
-          {/* Column 1: Brand & Identity (2 cols on lg) */}
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 pb-10 sm:pb-12 border-b border-[rgba(185,176,160,0.08)]">
+          {/* Column 1: Brand & Identity (2 cols on lg, full width on mobile) */}
+          <div className="sm:col-span-2 space-y-3.5">
             <Link to="/" className="flex items-center space-x-3 group">
               <div className="w-9 h-9 rounded-xl bg-[#151715] border border-[rgba(229,180,91,0.3)] shadow-glow-gold flex items-center justify-center group-hover:scale-105 transition-transform">
                 <Cpu className="w-5 h-5 text-[#E5B45B]" />
@@ -40,8 +40,8 @@ export default function Footer() {
               The autonomous visual automation platform for technical teams. Connect webhook triggers, multi-model AI reasoning, and deterministic condition branching with full execution telemetry.
             </p>
 
-            <div className="pt-2 flex items-center space-x-2">
-              <span className="flex h-2 w-2 relative">
+            <div className="pt-1.5 flex flex-wrap items-center gap-2">
+              <span className="flex h-2 w-2 relative flex-shrink-0">
                 <span className="motion-safe:animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#059669]"></span>
               </span>
@@ -59,19 +59,19 @@ export default function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link to="/workflows/new" className="hover:text-[#E5B45B] transition-colors flex items-center space-x-1.5">
-                  <Workflow className="w-3.5 h-3.5 text-[#E5B45B]" />
+                  <Workflow className="w-3.5 h-3.5 text-[#E5B45B] flex-shrink-0" />
                   <span>Visual Canvas</span>
                 </Link>
               </li>
               <li>
                 <Link to="/executions" className="hover:text-[#E5B45B] transition-colors flex items-center space-x-1.5">
-                  <PlayCircle className="w-3.5 h-3.5 text-[#059669]" />
+                  <PlayCircle className="w-3.5 h-3.5 text-[#059669] flex-shrink-0" />
                   <span>Execution History</span>
                 </Link>
               </li>
               <li>
                 <Link to="/dashboard" className="hover:text-[#E5B45B] transition-colors flex items-center space-x-1.5">
-                  <Layers className="w-3.5 h-3.5 text-[#B9B0A0]" />
+                  <Layers className="w-3.5 h-3.5 text-[#B9B0A0] flex-shrink-0" />
                   <span>Platform Dashboard</span>
                 </Link>
               </li>
@@ -86,9 +86,9 @@ export default function Footer() {
                   rel="noopener noreferrer"
                   className="hover:text-[#E5B45B] transition-colors flex items-center space-x-1.5"
                 >
-                  <Activity className="w-3.5 h-3.5 text-[#059669]" />
+                  <Activity className="w-3.5 h-3.5 text-[#059669] flex-shrink-0" />
                   <span>System Health Check</span>
-                  <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                  <ExternalLink className="w-2.5 h-2.5 opacity-60 flex-shrink-0" />
                 </a>
               </li>
             </ul>
@@ -113,7 +113,7 @@ export default function Footer() {
                   onClick={() => scrollToSection('features')}
                   className="hover:text-[#E5B45B] transition-colors text-left"
                 >
-                  Gemini & Fast LLMs
+                  Gemini &amp; Fast LLMs
                 </button>
               </li>
               <li>
@@ -180,17 +180,17 @@ export default function Footer() {
         </div>
 
         {/* Bottom Bar: Copyright & Tech Badges */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#B9B0A0]/70">
+        <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-[#B9B0A0]/70 text-center sm:text-left">
           <p>© 2026 FlowForge AI. All rights reserved.</p>
 
-          <div className="flex flex-wrap items-center gap-4">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-x-4 gap-y-2">
             <span className="flex items-center space-x-1">
               <Zap className="w-3 h-3 text-[#E5B45B]" />
               <span>React 19 + Vite</span>
             </span>
             <span className="flex items-center space-x-1">
               <Shield className="w-3 h-3 text-[#E5B45B]" />
-              <span>JWT & User Tenancy</span>
+              <span>JWT &amp; User Tenancy</span>
             </span>
             <span className="flex items-center space-x-1">
               <CheckCircle2 className="w-3 h-3 text-[#059669]" />

@@ -91,10 +91,10 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/80 backdrop-blur-sm animate-fade-in select-none">
-      <div className="max-w-2xl w-full max-h-[85vh] rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl shadow-inner-highlight flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-[#0B0D0C]/80 backdrop-blur-sm animate-fade-in select-none">
+      <div className="max-w-2xl w-full max-h-[90dvh] sm:max-h-[85vh] rounded-2xl sm:rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="p-6 border-b border-[rgba(185,176,160,0.08)] flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-[rgba(185,176,160,0.08)] flex items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
             <div
               className={`w-10 h-10 rounded-xl flex items-center justify-center border shadow-sm ${
@@ -387,13 +387,13 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[rgba(185,176,160,0.08)] bg-[#0B0D0C] flex items-center justify-between">
-          <div className="flex items-center space-x-2.5">
+        <div className="p-3 sm:p-4 border-t border-[rgba(185,176,160,0.08)] bg-[#0B0D0C] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2">
             {onRerun && (
               <button
                 onClick={onRerun}
                 disabled={isRerunning}
-                className="inline-flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#E5B45B] to-[#D49E3F] text-[#0B0D0C] font-semibold text-xs hover:shadow-glow-gold transition-all disabled:opacity-50"
+                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#E5B45B] to-[#D49E3F] text-[#0B0D0C] font-semibold text-xs hover:shadow-glow-gold transition-all disabled:opacity-50"
               >
                 <RotateCw className={`w-3.5 h-3.5 ${isRerunning ? 'motion-safe:animate-spin' : ''}`} />
                 <span>{isRerunning ? 'Rerunning...' : 'Rerun Pipeline'}</span>
@@ -403,18 +403,18 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
             {execution && (
               <button
                 onClick={handleExportTraceJson}
-                className="inline-flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-[#151715] hover:bg-[#1a1d1a] border border-[rgba(185,176,160,0.18)] text-xs font-semibold text-[#F5F0E6] hover:text-[#E5B45B] transition-colors"
+                className="inline-flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-[#151715] hover:bg-[#1a1d1a] border border-[rgba(185,176,160,0.18)] text-xs font-semibold text-[#F5F0E6] hover:text-[#E5B45B] transition-colors"
                 title="Download complete JSON execution trace"
               >
                 <Download className="w-3.5 h-3.5 text-[#E5B45B]" />
-                <span className="hidden sm:inline">Export JSON</span>
+                <span>Export JSON</span>
               </button>
             )}
           </div>
 
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl bg-[#151715] hover:bg-[#252419] text-[#F5F0E6] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.16)] text-xs font-semibold transition-colors"
+            className="px-3.5 py-2 rounded-xl bg-[#151715] hover:bg-[#252419] text-[#F5F0E6] hover:text-[#E5B45B] border border-[rgba(185,176,160,0.16)] text-xs font-semibold transition-colors ml-auto sm:ml-0"
           >
             Close Telemetry
           </button>

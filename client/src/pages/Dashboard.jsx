@@ -251,13 +251,13 @@ export default function Dashboard() {
         {/* Dashboard Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl w-full mx-auto">
           {/* Operations Command Header */}
-          <section className="relative overflow-hidden rounded-2xl bg-[#141714] border border-[rgba(185,176,160,0.14)] p-6 sm:p-7 shadow-2xl shadow-inner-highlight">
+          <section className="relative overflow-hidden rounded-2xl bg-[#141714] border border-[rgba(185,176,160,0.14)] p-5 sm:p-7 shadow-2xl shadow-inner-highlight">
             <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 text-left">
               <div className="space-y-2.5 max-w-2xl">
-                <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-[#1C1F1C] border border-[rgba(185,176,160,0.16)] text-xs font-mono">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
-                  <span className="text-[#B9B0A0] text-[11px] uppercase tracking-wider">WORKSPACE // OPERATIONAL</span>
-                  <span className="text-[10px] text-[#E5B45B] font-semibold bg-[#252419] px-2 py-0.2 rounded border border-[rgba(229,180,91,0.25)]">
+                <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-[#1C1F1C] border border-[rgba(185,176,160,0.16)] text-xs font-mono max-w-full flex-wrap">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse shrink-0" />
+                  <span className="text-[#B9B0A0] text-[10px] sm:text-[11px] uppercase tracking-wider">WORKSPACE // OPERATIONAL</span>
+                  <span className="text-[10px] text-[#E5B45B] font-semibold bg-[#252419] px-2 py-0.5 rounded border border-[rgba(229,180,91,0.25)] shrink-0">
                     v3.0
                   </span>
                 </div>
@@ -290,10 +290,10 @@ export default function Dashboard() {
               </div>
 
               {/* Header Primary Action Triggers */}
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto">
                 <button
                   onClick={() => navigate('/workflows/new')}
-                  className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] text-xs sm:text-sm font-bold shadow-lg shadow-[#E5B45B]/20 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
+                  className="inline-flex items-center justify-center space-x-2 px-5 py-2.5 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] text-xs sm:text-sm font-bold shadow-lg shadow-[#E5B45B]/20 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4 text-[#0B0D0C]" />
                   <span>Create Workflow</span>
@@ -301,7 +301,7 @@ export default function Dashboard() {
 
                 <button
                   onClick={() => navigate('/templates')}
-                  className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1C1F1C] hover:bg-[#252825] text-[#F5F0E6] text-xs sm:text-sm font-medium border border-[rgba(185,176,160,0.16)] transition-all hover:-translate-y-0.5"
+                  className="inline-flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1C1F1C] hover:bg-[#252825] text-[#F5F0E6] text-xs sm:text-sm font-medium border border-[rgba(185,176,160,0.16)] transition-all hover:-translate-y-0.5"
                 >
                   <Layers className="w-4 h-4 text-[#B9B0A0]" />
                   <span>Browse Blueprints</span>

@@ -46,12 +46,12 @@ export default function TopNav({
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 h-16 bg-[#0B0D0C]/85 backdrop-blur-md border-b border-[rgba(185,176,160,0.1)] px-4 sm:px-6 lg:px-8 flex items-center justify-between shadow-inner-highlight">
+    <header className="sticky top-0 z-30 h-16 bg-[#0B0D0C]/85 backdrop-blur-md border-b border-[rgba(185,176,160,0.1)] px-3 sm:px-6 lg:px-8 flex items-center justify-between shadow-inner-highlight">
       {/* Left: Mobile hamburger & Search */}
-      <div className="flex items-center space-x-3 sm:space-x-4 flex-1 max-w-xl">
+      <div className="flex items-center space-x-2.5 sm:space-x-4 flex-1 max-w-xl">
         <button
           onClick={onOpenMobileSidebar}
-          className="lg:hidden p-2 rounded-xl text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] border border-[rgba(185,176,160,0.1)] transition-colors"
+          className="lg:hidden p-2 rounded-xl text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] border border-[rgba(185,176,160,0.1)] transition-colors shrink-0"
           aria-label="Open navigation menu"
         >
           <Menu className="w-5 h-5" />
@@ -59,8 +59,8 @@ export default function TopNav({
 
         {/* Search Input for workflows, executions, and templates */}
         <div className="relative w-full max-w-xs sm:max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#B9B0A0]/70">
-            <Search className="w-4 h-4" />
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-[#B9B0A0]/70">
+            <Search className="w-3.5 h-3.5" />
           </div>
           <input
             ref={searchInputRef}
@@ -69,7 +69,7 @@ export default function TopNav({
             onChange={handleQueryChange}
             placeholder="Search workflows, executions, templates..."
             aria-label="Search workflows, executions, templates"
-            className="w-full pl-9 pr-14 py-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight text-[#F5F0E6] placeholder-[#B9B0A0]/60 text-xs sm:text-sm focus:outline-none focus:border-[#E5B45B] focus:ring-2 focus:ring-[#E5B45B]/15 transition-all"
+            className="w-full pl-8 sm:pl-9 pr-8 sm:pr-14 py-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight text-[#F5F0E6] placeholder-[#B9B0A0]/60 text-xs sm:text-sm focus:outline-none focus:border-[#E5B45B] focus:ring-2 focus:ring-[#E5B45B]/15 transition-all"
           />
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
             <span className="hidden sm:inline-flex items-center space-x-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-[#0B0D0C] text-[#B9B0A0]/70 border border-[rgba(185,176,160,0.12)]">
@@ -82,7 +82,7 @@ export default function TopNav({
 
 
       {/* Right: Telemetry pill, Notification icon, and User Profile with Plan */}
-      <div className="flex items-center space-x-3 sm:space-x-4">
+      <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
         {/* Backend health status pill */}
         <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full bg-[#151715] border border-[rgba(185,176,160,0.12)] text-xs text-[#B9B0A0]">
           <span className="flex h-2 w-2 relative">
@@ -98,13 +98,14 @@ export default function TopNav({
             onClick={() => setShowNotifications(!showNotifications)}
             className="p-2 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] text-[#B9B0A0] hover:text-[#F5F0E6] hover:border-[#E5B45B]/40 transition-all relative"
             title="System notifications"
+            aria-label="System notifications"
           >
             <Bell className="w-4 h-4" />
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E5B45B]" />
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-72 sm:w-80 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl shadow-inner-highlight p-4 space-y-3 z-50">
+            <div className="absolute right-0 mt-2 w-72 sm:w-80 max-w-[calc(100vw-24px)] rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl shadow-inner-highlight p-4 space-y-3 z-50">
               <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-2.5">
                 <span className="text-xs font-semibold text-[#F5F0E6]">Notifications</span>
                 <span className="text-[10px] text-[#E5B45B] font-mono">System Active</span>

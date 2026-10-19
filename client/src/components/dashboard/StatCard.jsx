@@ -56,7 +56,7 @@ export default function StatCard({
           <span className="text-[11px] font-mono uppercase tracking-wider text-[#B9B0A0] block">
             {label}
           </span>
-          <div className="text-3xl font-extrabold text-[#F5F0E6] tracking-tight font-sans">
+          <div className="text-2xl sm:text-3xl font-extrabold text-[#F5F0E6] tracking-tight font-sans">
             {value}
           </div>
         </div>
