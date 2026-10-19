@@ -84,6 +84,12 @@ export default function GoogleSignInButton({
           cancel_on_tap_outside: true,
         });
 
+        // Calculate safe responsive width within Google GSI allowed range [200, 400]
+        const containerWidth = buttonRef.current?.parentElement?.offsetWidth || buttonRef.current?.offsetWidth || 0;
+        const safeWidth = containerWidth > 0
+          ? Math.max(200, Math.min(Math.floor(containerWidth), 400))
+          : 250;
+
         buttonRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(buttonRef.current, {
           type: 'standard',
@@ -92,7 +98,7 @@ export default function GoogleSignInButton({
           text: isSignUp ? 'signup_with' : 'signin_with',
           shape: 'rectangular',
           logo_alignment: 'left',
-          width: buttonRef.current.offsetWidth || 350,
+          width: safeWidth,
         });
 
         setScriptLoaded(true);
@@ -166,8 +172,8 @@ export default function GoogleSignInButton({
       {/* Target container for Google's official GIS button */}
       <div
         ref={buttonRef}
-        className={`w-full flex justify-center ${!scriptLoaded ? 'hidden' : ''}`}
-        style={{ minHeight: '40px' }}
+        className={`w-full flex justify-center ${!scriptLoaded ? 'invisible h-0 overflow-hidden' : ''}`}
+        style={{ minHeight: scriptLoaded ? '40px' : '0px' }}
       />
 
       {loading && (

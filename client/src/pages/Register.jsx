@@ -90,7 +90,7 @@ export default function Register() {
     return (
       <div className="min-h-[calc(100vh-8rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 selection:bg-[#E5B45B]/20 selection:text-[#E5B45B]">
         <div className="max-w-md w-full space-y-8">
-          <div className="rounded-3xl border border-[#059669]/40 bg-[#151715] p-8 shadow-2xl shadow-inner-highlight text-center space-y-6">
+          <div className="rounded-3xl border border-[#059669]/40 bg-[#151715] p-6 sm:p-8 shadow-2xl shadow-inner-highlight text-center space-y-6">
             <div className="w-16 h-16 rounded-2xl bg-[#059669]/15 border border-[#059669]/40 text-[#059669] flex items-center justify-center mx-auto shadow-glow-emerald">
               <CheckCircle2 className="w-8 h-8" />
             </div>
@@ -174,7 +174,7 @@ export default function Register() {
 
         {/* Right Column: Registration Form */}
         <div className="md:col-span-7 space-y-6">
-          <div className="rounded-3xl border border-[rgba(185,176,160,0.14)] bg-[#151715] p-7 sm:p-8 shadow-2xl shadow-inner-highlight space-y-6 text-left">
+          <div className="rounded-3xl border border-[rgba(185,176,160,0.14)] bg-[#151715] p-5 sm:p-7 shadow-2xl shadow-inner-highlight space-y-6 text-left">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-[#F5F0E6]">
                 Establish your workspace

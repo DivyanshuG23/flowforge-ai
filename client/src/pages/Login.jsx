@@ -141,7 +141,7 @@ export default function Login() {
         {/* Right Column: Authentication Card */}
         <div className="md:col-span-7 space-y-6">
           {/* Card Container */}
-          <div className="rounded-3xl border border-[rgba(185,176,160,0.14)] bg-[#151715] p-7 sm:p-8 shadow-2xl shadow-inner-highlight space-y-6 text-left">
+          <div className="rounded-3xl border border-[rgba(185,176,160,0.14)] bg-[#151715] p-5 sm:p-7 shadow-2xl shadow-inner-highlight space-y-6 text-left">
             <div className="space-y-1">
               <h1 className="text-2xl font-bold tracking-tight text-[#F5F0E6]">
                 Sign in to your account
