@@ -119,10 +119,10 @@ export default function Sidebar({ isOpen, onClose, onSelectFeature }) {
                     onClick={() => {
                       if (onClose) onClose();
                     }}
-                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                    className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all relative overflow-hidden ${
                       item.active
-                        ? 'bg-[#252419] text-[#F5F0E6] border border-[rgba(229,180,91,0.35)] shadow-glow-gold font-semibold'
-                        : 'text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715]'
+                        ? 'bg-[#252419] text-[#F5F0E6] border border-[rgba(229,180,91,0.35)] shadow-glow-gold font-semibold before:absolute before:left-0 before:top-2 before:bottom-2 before:w-1 before:rounded-r before:bg-[#E5B45B]'
+                        : 'text-[#B9B0A0] hover:text-[#F5F0E6] hover:bg-[#151715] hover:border hover:border-[rgba(185,176,160,0.08)]'
                     }`}
                   >
                     <div className="flex items-center space-x-3">

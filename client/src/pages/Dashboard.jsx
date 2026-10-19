@@ -250,79 +250,50 @@ export default function Dashboard() {
 
         {/* Dashboard Body */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-8 max-w-7xl w-full mx-auto">
-          {/* Welcome Section */}
-          <section className="relative overflow-hidden rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-2xl">
-            {/* Abstract Gold & Emerald Wave Artwork */}
-            <svg 
-              className="absolute right-0 top-0 bottom-0 w-full sm:w-2/3 h-full opacity-25 pointer-events-none" 
-              viewBox="0 0 600 240" 
-              fill="none" 
-              preserveAspectRatio="none"
-            >
-              <path 
-                d="M0,120 C180,220 320,30 600,130 L600,240 L0,240 Z" 
-                fill="url(#goldGradient)" 
-              />
-              <path 
-                d="M0,160 C150,60 380,230 600,140 L600,240 L0,240 Z" 
-                fill="url(#emeraldGradient)" 
-              />
-              <defs>
-                <linearGradient id="goldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#E5B45B" stopOpacity="0.35" />
-                  <stop offset="60%" stopColor="#252419" stopOpacity="0.15" />
-                  <stop offset="100%" stopColor="#0B0D0C" stopOpacity="0" />
-                </linearGradient>
-                <linearGradient id="emeraldGradient" x1="0%" y1="100%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#059669" stopOpacity="0.3" />
-                  <stop offset="80%" stopColor="#151715" stopOpacity="0.05" />
-                  <stop offset="100%" stopColor="#0B0D0C" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-            </svg>
-
-            {/* Subtle glow orb */}
-            <div className="absolute top-0 right-0 -mt-10 -mr-10 w-72 h-72 rounded-full bg-[#E5B45B]/10 blur-3xl pointer-events-none" />
-
-            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-              <div className="space-y-3 max-w-2xl">
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-[#252419] border border-[rgba(229,180,91,0.25)] text-[#E5B45B] text-xs font-semibold">
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>FlowForge AI • Autonomous Engine v3.0</span>
+          {/* Operations Command Header */}
+          <section className="relative overflow-hidden rounded-2xl bg-[#141714] border border-[rgba(185,176,160,0.14)] p-6 sm:p-7 shadow-2xl shadow-inner-highlight">
+            <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6 text-left">
+              <div className="space-y-2.5 max-w-2xl">
+                <div className="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-[#1C1F1C] border border-[rgba(185,176,160,0.16)] text-xs font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#059669] animate-pulse" />
+                  <span className="text-[#B9B0A0] text-[11px] uppercase tracking-wider">WORKSPACE // OPERATIONAL</span>
+                  <span className="text-[10px] text-[#E5B45B] font-semibold bg-[#252419] px-2 py-0.2 rounded border border-[rgba(229,180,91,0.25)]">
+                    v3.0
+                  </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight text-[#F5F0E6]">
+                <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#F5F0E6]">
                   Welcome back,{' '}
                   <span className="text-[#E5B45B]">
                     {user?.name || user?.email || 'Builder'}
                   </span>
                 </h1>
 
-                <p className="text-sm sm:text-base text-[#B9B0A0] leading-relaxed">
-                  Orchestrate modular DAG pipelines, configure multi-provider AI failover, and inspect millisecond-level step telemetry across your workspace.
+                <p className="text-xs sm:text-sm text-[#B9B0A0] leading-relaxed">
+                  Orchestrate visual DAGs with Kahn cycle validation, automated multi-provider failover, and millisecond telemetry.
                 </p>
 
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(185,176,160,0.15)] text-[11px] font-mono text-[#B9B0A0]">
+                <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px]">
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] text-[#B9B0A0]">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#059669]" />
-                    <span>Engine: Express + MongoDB</span>
+                    <span>Express + Mongo Atlas</span>
                   </span>
-                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(229,180,91,0.25)] text-[11px] font-mono text-[#E5B45B]">
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#0B0D0C] border border-[rgba(229,180,91,0.25)] text-[#E5B45B]">
                     <Sparkles className="w-3 h-3 text-[#E5B45B]" />
-                    <span>Primary AI: gemini-3.8-flash</span>
+                    <span>Gemini-3.8-Flash (Primary)</span>
                   </span>
-                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-[#0B0D0C]/80 border border-[rgba(185,176,160,0.15)] text-[11px] font-mono text-[#B9B0A0]">
+                  <span className="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] text-[#B9B0A0]">
                     <Shield className="w-3 h-3 text-[#B9B0A0]" />
-                    <span>Tenancy: Isolated Scope</span>
+                    <span>Isolated Tenancy</span>
                   </span>
                 </div>
               </div>
 
-              {/* Primary Actions */}
+              {/* Header Primary Action Triggers */}
               <div className="flex flex-wrap items-center gap-3">
                 <button
                   onClick={() => navigate('/workflows/new')}
-                  className="inline-flex items-center space-x-2 px-6 py-3 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] text-sm font-bold shadow-lg shadow-[#E5B45B]/20 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex items-center space-x-2 px-5 py-2.5 rounded-xl bg-[#E5B45B] hover:bg-[#D49E3F] text-[#0B0D0C] text-xs sm:text-sm font-bold shadow-lg shadow-[#E5B45B]/20 transition-all hover:-translate-y-0.5 active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4 text-[#0B0D0C]" />
                   <span>Create Workflow</span>
@@ -330,90 +301,116 @@ export default function Dashboard() {
 
                 <button
                   onClick={() => navigate('/templates')}
-                  className="inline-flex items-center space-x-2 px-5 py-3 rounded-xl bg-[#151715] hover:bg-[#1C1F1C] text-[#F5F0E6] text-sm font-medium border border-[rgba(185,176,160,0.15)] transition-colors"
+                  className="inline-flex items-center space-x-2 px-4 py-2.5 rounded-xl bg-[#1C1F1C] hover:bg-[#252825] text-[#F5F0E6] text-xs sm:text-sm font-medium border border-[rgba(185,176,160,0.16)] transition-all hover:-translate-y-0.5"
                 >
                   <Layers className="w-4 h-4 text-[#B9B0A0]" />
-                  <span>Browse Templates</span>
+                  <span>Browse Blueprints</span>
                 </button>
               </div>
             </div>
           </section>
 
-          {/* Statistics Cards */}
+          {/* Unified Telemetry & Health Console */}
           <section className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-[#B9B0A0]">
-                Telemetry & Statistics
-              </h2>
+            <div className="flex items-center justify-between text-left">
+              <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-[#B9B0A0]">
+                // TELEMETRY &amp; OPERATIONAL HEALTH
+              </span>
               <span className="text-[11px] text-[#B9B0A0]/70 font-mono">
-                Real-Time Database Metrics
+                Real-Time MongoDB Metrics
               </span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <StatCard
-                label="Total Workflows"
-                value={isLoadingWorkflows ? '...' : workflows.length.toString()}
-                note={
-                  isLoadingWorkflows
-                    ? 'Syncing...'
-                    : `${workflows.length} configured pipeline${workflows.length === 1 ? '' : 's'}`
-                }
-                icon={Workflow}
-                accentColor="gold"
-                badge="Active"
-              />
-              <StatCard
-                label="Successful Runs"
-                value={isLoadingStats ? '...' : executionStats.succeeded.toString()}
-                note={
-                  isLoadingStats
-                    ? 'Syncing...'
-                    : executionStats.total > 0
-                    ? `${executionStats.successRate}% completion rate`
-                    : 'Awaiting execution'
-                }
-                icon={CheckCircle2}
-                accentColor="emerald"
-                badge={executionStats.total > 0 && executionStats.failed === 0 ? '100% Health' : 'Completed'}
-              />
-              <StatCard
-                label="Failed Runs"
-                value={isLoadingStats ? '...' : executionStats.failed.toString()}
-                note={
-                  isLoadingStats
-                    ? 'Syncing...'
-                    : executionStats.failed === 0
-                    ? '0 runtime anomalies'
-                    : `${executionStats.failed} anomaly recorded`
-                }
-                icon={AlertCircle}
-                accentColor="ruby"
-                badge={executionStats.failed === 0 ? 'Zero Errors' : 'Anomalies'}
-              />
-              <StatCard
-                label="Total Executions"
-                value={isLoadingStats ? '...' : executionStats.total.toString()}
-                note={
-                  isLoadingStats
-                    ? 'Syncing...'
-                    : executionStats.running > 0
-                    ? `${executionStats.running} running now`
-                    : executionStats.total === 0
-                    ? 'Engine idle'
-                    : `${executionStats.total} total runs`
-                }
-                icon={PlayCircle}
-                accentColor="neutral"
-                badge={executionStats.total > 0 ? 'Live' : 'Idle'}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 text-left">
+              {/* Hero Metric Panel: Overall Pipeline Reliability (5 cols) */}
+              <div className="lg:col-span-5 p-6 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.14)] shadow-inner-highlight flex flex-col justify-between space-y-5">
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-mono uppercase tracking-wider text-[#B9B0A0]">
+                      Pipeline Reliability
+                    </span>
+                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold ${
+                      executionStats.failed === 0 ? 'bg-[#059669]/15 text-[#059669] border border-[#059669]/30' : 'bg-[#C83C3C]/15 text-[#C83C3C] border border-[#C83C3C]/30'
+                    }`}>
+                      {isLoadingStats ? 'Syncing...' : executionStats.total === 0 ? 'Standby' : executionStats.failed === 0 ? '100% Health' : `${executionStats.successRate}% OK`}
+                    </span>
+                  </div>
+
+                  <div className="text-4xl font-extrabold text-[#F5F0E6] font-mono tracking-tight pt-1">
+                    {isLoadingStats ? '—' : executionStats.total === 0 ? '100.0%' : `${executionStats.successRate}%`}
+                  </div>
+                  <p className="text-xs text-[#B9B0A0] leading-relaxed pt-1">
+                    {executionStats.total === 0
+                      ? 'Zero anomalies recorded. Awaiting workflow execution trigger.'
+                      : `${executionStats.succeeded} of ${executionStats.total} runs succeeded with deterministic branch convergence.`}
+                  </p>
+                </div>
+
+                {/* Reliability Progress Track */}
+                <div className="space-y-1.5 pt-2 border-t border-[rgba(185,176,160,0.08)]">
+                  <div className="flex items-center justify-between text-[10px] font-mono text-[#B9B0A0]">
+                    <span>ENGINE DISPATCH STATUS</span>
+                    <span className="text-[#059669] font-bold">
+                      {executionStats.running > 0 ? `${executionStats.running} Active` : 'NOMINAL'}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-[#0B0D0C] overflow-hidden p-0.5 border border-[rgba(185,176,160,0.1)]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-[#059669] to-[#E5B45B] transition-all duration-500"
+                      style={{ width: `${isLoadingStats ? 0 : executionStats.total === 0 ? 100 : executionStats.successRate}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Instrument Readout Matrix (7 cols) */}
+              <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard
+                  label="Configured DAGs"
+                  value={isLoadingWorkflows ? '...' : workflows.length.toString()}
+                  note={
+                    isLoadingWorkflows
+                      ? 'Syncing...'
+                      : `${workflows.length} active pipeline${workflows.length === 1 ? '' : 's'}`
+                  }
+                  icon={Workflow}
+                  accentColor="gold"
+                  badge="Workspace"
+                />
+                <StatCard
+                  label="Succeeded Runs"
+                  value={isLoadingStats ? '...' : executionStats.succeeded.toString()}
+                  note={
+                    isLoadingStats
+                      ? 'Syncing...'
+                      : `${executionStats.succeeded} nominal runs`
+                  }
+                  icon={CheckCircle2}
+                  accentColor="emerald"
+                  badge="Completed"
+                />
+                <StatCard
+                  label="Runtime Anomalies"
+                  value={isLoadingStats ? '...' : executionStats.failed.toString()}
+                  note={
+                    isLoadingStats
+                      ? 'Syncing...'
+                      : executionStats.failed === 0
+                      ? '0 errors'
+                      : `${executionStats.failed} anomaly`
+                  }
+                  icon={AlertCircle}
+                  accentColor={executionStats.failed > 0 ? 'ruby' : 'emerald'}
+                  badge={executionStats.failed === 0 ? 'Zero Errors' : 'Action Req'}
+                />
+              </div>
             </div>
           </section>
 
           {/* Recent Workflows & Execution Activity */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Recent Workflows (2 Columns on Desktop) */}
-            <section className="lg:col-span-2 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl space-y-5">
+            <section className="lg:col-span-2 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl shadow-inner-highlight space-y-5">
               <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-4">
                 <div className="flex items-center space-x-2.5">
                   <Workflow className="w-5 h-5 text-[#E5B45B]" />
@@ -569,7 +566,7 @@ export default function Dashboard() {
                       return (
                         <div
                           key={wf._id}
-                          className="group p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                          className="group p-4 rounded-xl bg-[#0B0D0C] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                         >
                           {/* Info */}
                           <div className="flex items-start sm:items-center space-x-3.5 min-w-0">
@@ -675,7 +672,7 @@ export default function Dashboard() {
             </section>
 
             {/* Execution Activity (1 Column on Desktop) */}
-            <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl space-y-5">
+            <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 shadow-xl shadow-inner-highlight space-y-5">
               <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-4">
                 <div className="flex items-center space-x-2.5">
                   <Activity className="w-5 h-5 text-[#059669]" />

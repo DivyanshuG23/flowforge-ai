@@ -68,7 +68,7 @@ export default function PropertiesPanel({
   const [copiedCurl, setCopiedCurl] = useState(false);
   if (!selectedNode) {
     return (
-      <aside className="w-80 bg-[#0B0D0C] border-l border-[rgba(185,176,160,0.12)] p-6 flex flex-col items-center justify-center text-center select-none hidden xl:flex">
+      <aside className="w-80 bg-[#0B0D0C] border-l border-[rgba(185,176,160,0.12)] shadow-inner-highlight p-6 flex flex-col items-center justify-center text-center select-none hidden xl:flex">
         <div className="w-12 h-12 rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.14)] flex items-center justify-center text-[#B9B0A0] mb-4">
           <Sliders className="w-6 h-6 text-[#E5B45B]" />
         </div>
@@ -111,7 +111,7 @@ export default function PropertiesPanel({
   };
 
   return (
-    <aside className="w-80 bg-[#0B0D0C] border-l border-[rgba(185,176,160,0.12)] flex flex-col z-20 overflow-y-auto">
+    <aside className="w-80 bg-[#0B0D0C] border-l border-[rgba(185,176,160,0.12)] shadow-inner-highlight flex flex-col z-20 overflow-y-auto">
       {/* Header */}
       <div className="h-16 px-5 flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] bg-[#0B0D0C] sticky top-0 z-10">
         <div className="flex items-center space-x-2.5">

@@ -866,7 +866,7 @@ function WorkflowEditorContent() {
           {/* Empty Canvas Overlay Helper */}
           {nodes.length === 0 && (
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none p-4">
-              <div className="pointer-events-auto max-w-md p-8 rounded-3xl bg-[#151715]/90 border border-[rgba(185,176,160,0.16)] backdrop-blur-md text-center shadow-2xl space-y-4">
+              <div className="pointer-events-auto max-w-md p-8 rounded-3xl bg-[#151715]/90 border border-[rgba(185,176,160,0.16)] backdrop-blur-md text-center shadow-2xl shadow-inner-highlight space-y-4">
                 <div className="w-12 h-12 rounded-2xl bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B] mx-auto">
                   <Layers className="w-6 h-6" />
                 </div>

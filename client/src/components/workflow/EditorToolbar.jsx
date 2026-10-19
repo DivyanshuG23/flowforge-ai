@@ -68,7 +68,7 @@ export default function EditorToolbar({
   };
 
   return (
-    <header className="h-16 px-4 sm:px-6 bg-[#0B0D0C] border-b border-[rgba(185,176,160,0.12)] flex items-center justify-between z-30 select-none">
+    <header className="h-16 px-4 sm:px-6 bg-[#0B0D0C] border-b border-[rgba(185,176,160,0.12)] flex items-center justify-between z-30 select-none shadow-inner-highlight">
       {/* Left: Back button & Workflow Name */}
       <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
         <button

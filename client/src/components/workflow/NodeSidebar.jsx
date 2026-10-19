@@ -78,7 +78,7 @@ export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }
 
   return (
     <aside
-      className={`relative z-20 bg-[#0B0D0C] border-r border-[rgba(185,176,160,0.12)] flex flex-col transition-all duration-300 ${
+      className={`relative z-20 bg-[#0B0D0C] border-r border-[rgba(185,176,160,0.12)] flex flex-col transition-all duration-300 shadow-inner-highlight ${
         isCollapsed ? 'w-14' : 'w-72'
       }`}
     >
@@ -114,7 +114,7 @@ export default function NodeSidebar({ onAddNode, isCollapsed, onToggleCollapse }
               draggable
               onDragStart={(e) => onDragStart(e, item.type)}
               onClick={() => onAddNode(item.type)}
-              className={`group cursor-grab active:cursor-grabbing p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-200 ${
+              className={`group cursor-grab active:cursor-grabbing p-3 rounded-xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-200 ${
                 isCollapsed ? 'flex justify-center p-2.5' : ''
               }`}
               title={isCollapsed ? `${item.label} (${item.description})` : undefined}

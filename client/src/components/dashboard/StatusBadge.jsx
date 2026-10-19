@@ -50,7 +50,7 @@ export default function StatusBadge({ status = 'pending', label }) {
 
   return (
     <span
-      className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${config.bg} ${config.text} ${config.border}`}
+      className={`inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold tracking-wide border shadow-sm ${config.bg} ${config.text} ${config.border}`}
     >
       <Icon className={`w-3.5 h-3.5 ${config.spin ? 'motion-safe:animate-spin' : ''}`} />
       <span>{displayLabel}</span>

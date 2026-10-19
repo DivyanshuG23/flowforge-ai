@@ -552,7 +552,7 @@ export default function Executions() {
           </section>
 
           {/* Execution Table & Filter Section */}
-          <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-5 sm:p-6 shadow-xl space-y-5">
+          <section className="rounded-2xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-5 sm:p-6 shadow-xl shadow-inner-highlight space-y-5">
             {/* Filter & Search Bar */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-4 border-b border-[rgba(185,176,160,0.08)]">
               {/* Status Filter Tabs */}
@@ -895,7 +895,7 @@ export default function Executions() {
       {/* Execution Trace Detail Modal */}
       {selectedExecutionId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/80 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#151715] border border-[rgba(185,176,160,0.2)] rounded-2xl shadow-2xl flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative w-full max-w-2xl max-h-[90vh] bg-[#151715] border border-[rgba(185,176,160,0.2)] rounded-2xl shadow-2xl shadow-inner-highlight flex flex-col my-auto overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Modal Header */}
             <div className="p-5 border-b border-[rgba(185,176,160,0.1)] flex items-start justify-between bg-[#0B0D0C]">
               <div>

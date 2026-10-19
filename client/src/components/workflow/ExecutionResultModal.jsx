@@ -92,7 +92,7 @@ export default function ExecutionResultModal({ isOpen, onClose, execution, error
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0D0C]/80 backdrop-blur-sm animate-fade-in select-none">
-      <div className="max-w-2xl w-full max-h-[85vh] rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl flex flex-col overflow-hidden">
+      <div className="max-w-2xl w-full max-h-[85vh] rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.18)] shadow-2xl shadow-inner-highlight flex flex-col overflow-hidden">
         {/* Header */}
         <div className="p-6 border-b border-[rgba(185,176,160,0.08)] flex items-center justify-between">
           <div className="flex items-center space-x-3">

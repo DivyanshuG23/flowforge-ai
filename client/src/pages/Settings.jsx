@@ -204,7 +204,7 @@ export default function Settings() {
           </div>
 
           {/* Section 1: Operator Profile Information */}
-          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl space-y-6">
+          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl shadow-inner-highlight space-y-6">
             <div className="flex items-center justify-between border-b border-[rgba(185,176,160,0.08)] pb-4">
               <div className="flex items-center space-x-3">
                 <div className="w-10 h-10 rounded-2xl bg-[#252419] border border-[rgba(229,180,91,0.3)] flex items-center justify-center text-[#E5B45B] font-bold text-sm shadow-md">
@@ -351,7 +351,7 @@ export default function Settings() {
           </section>
 
           {/* Section 2: Security & Password Update */}
-          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl space-y-6">
+          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl shadow-inner-highlight space-y-6">
             <div className="border-b border-[rgba(185,176,160,0.08)] pb-4 flex items-center space-x-3">
               <div className="w-9 h-9 rounded-xl bg-[#252419] border border-[rgba(229,180,91,0.25)] flex items-center justify-center text-[#E5B45B]">
                 <Key className="w-4 h-4" />
@@ -465,7 +465,7 @@ export default function Settings() {
           </section>
 
           {/* Section 3: Platform Diagnostics & Engine Configuration */}
-          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl space-y-6">
+          <section className="rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] p-6 sm:p-8 shadow-xl shadow-inner-highlight space-y-6">
             <div className="border-b border-[rgba(185,176,160,0.08)] pb-4 flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <div className="w-9 h-9 rounded-xl bg-[#059669]/15 border border-[#059669]/30 flex items-center justify-center text-[#059669]">

@@ -22,7 +22,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="border-t border-[rgba(185,176,160,0.12)] bg-[#0B0D0C] text-[#B9B0A0] text-xs pt-16 pb-12 mt-auto">
+    <footer className="border-t border-[rgba(185,176,160,0.12)] bg-[#0B0D0C] text-[#B9B0A0] text-xs pt-16 pb-12 mt-auto shadow-inner-highlight">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-[rgba(185,176,160,0.08)]">
           {/* Column 1: Brand & Identity (2 cols on lg) */}

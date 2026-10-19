@@ -280,7 +280,7 @@ export default function Templates() {
                     return (
                       <div
                         key={wf._id}
-                        className="p-6 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 flex flex-col justify-between space-y-5"
+                        className="p-6 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between space-y-5"
                       >
                         <div className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -362,7 +362,7 @@ export default function Templates() {
                     return (
                       <div
                         key={template.id}
-                        className="p-6 sm:p-7 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] hover:border-[#E5B45B]/40 hover:shadow-glow-gold transition-all duration-300 flex flex-col justify-between space-y-6 group"
+                        className="p-6 sm:p-7 rounded-3xl bg-[#151715] border border-[rgba(185,176,160,0.12)] shadow-inner-highlight hover:border-[#E5B45B]/40 hover:shadow-glow-gold hover:-translate-y-0.5 transition-all duration-300 flex flex-col justify-between space-y-6 group"
                       >
                         <div className="space-y-4">
                           {/* Badge & Category */}
