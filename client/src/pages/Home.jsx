@@ -30,6 +30,7 @@ import {
   Boxes
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import WorkflowPreview from '../components/landing/WorkflowPreview';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -219,103 +220,7 @@ export default function Home() {
 
               {/* Viewport Content */}
               {activeTab === 'canvas' ? (
-                <div className="p-4 sm:p-5 relative engineering-grid-dense bg-[#0B0D0C] min-h-[340px] flex flex-col justify-center">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Node 1: Webhook */}
-                    <div
-                      className={`relative p-3 rounded-xl bg-[#151715] border transition-all duration-300 ${
-                        simStep >= 1
-                          ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
-                          : 'border-[rgba(185,176,160,0.14)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between pb-1.5 border-b border-[rgba(185,176,160,0.08)]">
-                        <span className="text-[9px] font-mono text-[#E5B45B] font-bold uppercase">
-                          [TRIGGER // HTTP]
-                        </span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                          simStep >= 1 ? 'bg-[#059669]/15 text-[#059669]' : 'text-[#B9B0A0]'
-                        }`}>
-                          {simStep >= 1 ? '1ms' : 'Ready'}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        <div className="text-xs font-bold text-[#F5F0E6]">Incident Webhook</div>
-                        <div className="text-[10px] text-[#B9B0A0] font-mono bg-[#0B0D0C] px-2 py-1 rounded border border-[rgba(185,176,160,0.08)]">
-                          POST /api/v1/alert
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Node 2: Gemini LLM */}
-                    <div
-                      className={`relative p-3 rounded-xl bg-[#151715] border transition-all duration-300 ${
-                        simStep >= 2
-                          ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
-                          : simStep === 1
-                          ? 'border-[#E5B45B] shadow-glow-gold animate-pulse'
-                          : 'border-[rgba(185,176,160,0.14)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between pb-1.5 border-b border-[rgba(185,176,160,0.08)]">
-                        <span className="text-[9px] font-mono text-[#E5B45B] font-bold uppercase">
-                          [AI // GEMINI-3.8]
-                        </span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                          simStep >= 2 ? 'bg-[#059669]/15 text-[#059669]' : 'text-[#B9B0A0]'
-                        }`}>
-                          {simStep >= 2 ? '420ms' : simStep === 1 ? 'Inferring...' : 'Pending'}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        <div className="text-xs font-bold text-[#F5F0E6]">Anomaly Triage</div>
-                        <div className="text-[10px] text-[#059669] font-mono bg-[#0B0D0C] px-2 py-1 rounded border border-[rgba(185,176,160,0.08)] truncate">
-                          severity: "CRITICAL"
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Node 3: Condition Evaluator */}
-                    <div
-                      className={`relative p-3 rounded-xl bg-[#151715] border transition-all duration-300 ${
-                        simStep >= 3
-                          ? 'border-[#059669] shadow-glow-emerald ring-1 ring-[#059669]'
-                          : 'border-[rgba(185,176,160,0.14)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between pb-1.5 border-b border-[rgba(185,176,160,0.08)]">
-                        <span className="text-[9px] font-mono text-[#059669] font-bold uppercase">
-                          [BRANCH // RULE]
-                        </span>
-                        <span className={`text-[9px] font-mono px-1.5 py-0.2 rounded ${
-                          simStep >= 3 ? 'bg-[#059669]/15 text-[#059669]' : 'text-[#B9B0A0]'
-                        }`}>
-                          {simStep >= 3 ? 'TRUE' : 'Pending'}
-                        </span>
-                      </div>
-                      <div className="mt-2 space-y-1">
-                        <div className="text-xs font-bold text-[#F5F0E6]">Is Critical?</div>
-                        <div className="text-[10px] text-[#B9B0A0] font-mono bg-[#0B0D0C] px-2 py-1 rounded border border-[rgba(185,176,160,0.08)]">
-                          severity == "CRITICAL"
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Branch Output Row */}
-                  <div className="mt-4 pt-3 border-t border-[rgba(185,176,160,0.1)] flex items-center justify-between text-xs font-mono">
-                    <div className="flex items-center space-x-2">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        simStep >= 4 ? 'bg-[#059669]/20 text-[#059669] border border-[#059669]/40' : 'bg-[#151715] text-[#B9B0A0]'
-                      }`}>
-                        BRANCH A: PagerDuty Escalate {simStep >= 4 ? '✓ Dispatched (14ms)' : ''}
-                      </span>
-                    </div>
-                    <span className="text-[10px] text-[#B9B0A0]/60">
-                      BRANCH B: Low Severity (Skipped)
-                    </span>
-                  </div>
-                </div>
+                <WorkflowPreview externalStep={simStep} isExternalSimulating={simulating} />
               ) : (
                 /* Telemetry Table View */
                 <div className="p-4 bg-[#0B0D0C] font-mono text-xs overflow-x-auto min-h-[340px]">

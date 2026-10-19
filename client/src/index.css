@@ -154,3 +154,23 @@
   }
 }
 
+/* Animated SVG edge data flow */
+@keyframes dataFlow {
+  from {
+    stroke-dashoffset: 20;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.animate-data-flow {
+  animation: dataFlow 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-data-flow {
+    animation: none !important;
+  }
+}
+
