@@ -956,7 +956,6 @@ export default function PropertiesPanel({
                         <option value="gemini-flash-latest">gemini-flash-latest (Latest Release)</option>
                         <option value="gemini-2.5-pro">gemini-2.5-pro (Flagship Reasoning Pro)</option>
                         <option value="gemini-2.0-flash">gemini-2.0-flash (Verified Stable)</option>
-                        <option value="gemini-2.5-flash">gemini-2.5-flash (Legacy / Deprecated)</option>
                       </>
                     )}
                     {selectedNode.data?.provider === 'groq' && (
