@@ -888,8 +888,6 @@ export default function PropertiesPanel({
                   <option value="gemini">Google Gemini (REST API)</option>
                   <option value="groq">Groq (GPT-OSS / Ultra-Fast LPU)</option>
                   <option value="openrouter">OpenRouter (Free Models :free)</option>
-                  <option value="openai">OpenAI (Chat Completions)</option>
-                  <option value="openai-compatible">OpenAI-Compatible Gateway</option>
                 </select>
               </div>
 
